@@ -5,6 +5,7 @@ To install the `pfar` package,
 library(devtools)
 install_github("gaow/pfar")
 ```
+If you do not have `devtools` or have no internet access, you need to [obtain the source code](https://github.com/gaow/pfar/archive/master.zip), decompress the tarball and type `make` to install the package.
 
 ## Running paired factor analysis
 
