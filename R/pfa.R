@@ -24,6 +24,7 @@ pfa <- function(X, K, F = NULL, P = NULL, q = NULL, omega = NULL) {
   stopifnot(length(q) == length(omega))
   ## data processing
   P[upper.tri(P)] <- 0
+  loglik <- 0
   ## factor analysis
   res <- .C("pfa_em",
             as.double(as.vector(X)),
@@ -35,6 +36,7 @@ pfa <- function(X, K, F = NULL, P = NULL, q = NULL, omega = NULL) {
             as.integer(ncol(X)),
             as.integer(nrow(F)),
             as.integer(length(q)),
+            loglik = as.integer(loglik),
             PACKAGE = "pfar")
-  return(NULL)
+  return(res$loglik)
 }

@@ -69,6 +69,11 @@ public:
     }
   }
 
+  double get_loglik_prop() {
+    // log likelihood up to a normalizing constant
+    return arma::accu(log_delta);
+  }
+
   void update_weights() {
     // update P and omega
     // this results in a K1K2 by q matrix of avglik
@@ -97,9 +102,6 @@ public:
 
   }
 
-  void get_loglik() {
-
-  }
 
 private:
   arma::mat D;

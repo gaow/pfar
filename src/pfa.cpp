@@ -11,14 +11,17 @@
 // @param J [int_pt] number of columns of matrix X and F
 // @param K [int_pt] number of rows of matrix F and P
 // @param C [int_pt] number of elements in q
+// @param loglik [double_pt] log likelihood
 
 extern "C" int pfa_em(double *, double *, double *, double *, double *,
-                      int *, int *, int *, int *);
+                      int *, int *, int *, int *, double * loglik);
 
 int pfa_em(double * X, double * F, double * P, double * q, double * omega,
-           int * N, int * J, int * K, int * C) {
+           int * N, int * J, int * K, int * C, double * loglik) {
+  double prev = curr = 0;
   PFA model(X, F, P, q, omega, *N, *J, *K, *C);
   model.get_log_delta_given_nkq();
+  curr = model.get_loglik_prop();
   model.update_weights();
   model.print();
   return 0;
