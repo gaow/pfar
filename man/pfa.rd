@@ -8,7 +8,11 @@ pfa(X)
 }
 
 \arguments{
-  \item{X}{[n,k] matrix of observed data}
+  \item{X}{[N, J] matrix of observed data}
+  \item{K}{[int] number of factors}
+  \item{F}{[K, J] initial factor matrix}
+  \item{P}{[K, K] initial factor pair frequency matrix}
+  \item{q}{[float, 1] initial vector of possible membership loadings, a discrete set}
 }
 
 \value{
@@ -27,5 +31,7 @@ pfa(X)
 
 \examples{
 library("pfar")
-?pfa
+# ?pfa
+dat = readRDS('vignettes/example_data.rds')
+pfa(dat$X, K = 15)
 }
