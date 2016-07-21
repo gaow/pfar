@@ -14,3 +14,10 @@ The main function in the `pfar` is `pfa`:
 > library(pfar)
 > ?pfa
 ```
+
+## Troubleshoot
+
+If you get error message *Cannot find lapack / blas* you need to install `LAPAC` and `BLAS` libraries. On Debian linux:
+```
+sudo apt-get install libblas-dev liblapack-dev
+```

@@ -1,8 +1,8 @@
 INCLUDE_FLAG = -I include -I .
-LINK_FLAGS = -lblas -llapack -lm -lgomp
+LINK_FLAGS = -lblas -llapack -lm -lgomp -lstdc++
 OPT = -O3
 CXX = g++
-CXXFLAGS = $(INCLUDE_FLAG) $(OPT) -std=c++11 -fopenmp 
+CXXFLAGS = $(INCLUDE_FLAG) $(OPT) -std=c++11 -fopenmp
 RLIB_FLAGS = -fPIC -shared
 SRC_FILES = $(filter-out main.cpp, $(wildcard *.cpp))
 
