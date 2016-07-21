@@ -40,11 +40,12 @@ public:
     omega.print("Membership grid weights:");
     s.print("Estimated standard deviation of data columns (features):");
     log_delta.print("Current log(delta) tensor:");
+    avg_delta.print("Current delta averaged over samples:");
   }
 
   void get_log_delta_given_nkq() {
     // this computes delta up to a normalizing constant
-    // this results in a N by k1k2 by q tensor
+    // this results in a N by k1k2 by q tensor of loglik
     log_delta.reshape(D.n_rows, int((1 + P.n_rows) * P.n_rows / 2), q.n_elem);
     for (size_t qq = 0; qq < q.n_elem; qq++) {
       size_t col_cnt = 0;
@@ -66,14 +67,29 @@ public:
         }
       }
     }
+    // this results in a K1K2 by q matrix of avglik
+    // which equals pi_k1k2 * omega_q
+    avg_delta.reshape(int((1 + P.n_rows) * P.n_rows / 2), q.n_elem);
+    arma::cube slice_rowsums = arma::sum(arma::exp(log_delta));
+    for (size_t qq = 0; qq < q.n_elem; qq++) {
+      avg_delta.col(qq) = arma::vectorise(slice_rowsums.slice(qq)) / D.n_rows;
+    }
   }
 
-  void update_pik() {
-
-  }
-
-  void update_omegaq() {
-
+  void update_pik_omegaq() {
+    // sum over q grids
+    arma::vec pik1k2 = arma::sum(avg_delta, 1);
+    pik1k2 = pik1k2 / arma::sum(pik1k2);
+    size_t col_cnt = 0;
+    for (size_t k1 = 0; k1 < P.n_rows; k1++) {
+      for (size_t k2 = 0; k2 <= k1; k2++) {
+        P.at(k1, k2) = pik1k2.at(col_cnt);
+        col_cnt++;
+      }
+    }
+    // sum over k1, k2
+    omega = arma::vectorise(arma::sum(avg_delta));
+    omega = omega / arma::sum(omega);
   }
 
   void update_F() {
@@ -91,6 +107,9 @@ private:
   arma::vec q;
   arma::vec omega;
   arma::vec s;
+  // N by K1K2 by q tensor
   arma::cube log_delta;
+  // K1K2 by q matrix
+  arma::mat avg_delta;
 };
 #endif
