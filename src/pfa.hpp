@@ -67,6 +67,10 @@ public:
         }
       }
     }
+  }
+
+  void update_weights() {
+    // update P and omega
     // this results in a K1K2 by q matrix of avglik
     // which equals pi_k1k2 * omega_q
     avg_delta.reshape(int((1 + P.n_rows) * P.n_rows / 2), q.n_elem);
@@ -74,9 +78,6 @@ public:
     for (size_t qq = 0; qq < q.n_elem; qq++) {
       avg_delta.col(qq) = arma::vectorise(slice_rowsums.slice(qq)) / D.n_rows;
     }
-  }
-
-  void update_pik_omegaq() {
     // sum over q grids
     arma::vec pik1k2 = arma::sum(avg_delta, 1);
     pik1k2 = pik1k2 / arma::sum(pik1k2);

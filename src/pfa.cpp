@@ -19,7 +19,7 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
            int * N, int * J, int * K, int * C) {
   PFA model(X, F, P, q, omega, *N, *J, *K, *C);
   model.get_log_delta_given_nkq();
-  model.update_pik_omegaq();
+  model.update_weights();
   model.print();
   return 0;
 }
