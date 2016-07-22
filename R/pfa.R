@@ -1,9 +1,14 @@
-pfa <- function(X, K, F = NULL, P = NULL, q = NULL, omega = NULL, controls = NULL) {
+pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, controls = NULL) {
   ## Initialize data
+  if (is.null(F) && is.null(K)) {
+    stop("[ERROR] Please either provide K or F!")
+  }
   if (is.null(F)) {
     # Initialize F with K factors all equal to the column mean of input X
     # FIXME: Have to find a smarter initilization of F
     F <- t(replicate(K, colMeans(X)))
+  } else {
+    K <- nrow(F)
   }
   if (is.null(P)) {
     # Initialize P uniformly
