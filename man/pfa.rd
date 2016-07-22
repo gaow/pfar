@@ -14,11 +14,17 @@ pfa(X)
   \item{P}{[K, K] initial factor pair frequency matrix}
   \item{q}{[C, 1] initial vector of possible membership loadings, a discrete set}
   \item{omega}{[C, 1] initial weight of membership loadings, a discrete set corresponding to q}
-  \item(controls){{tol = ...} list of runtime variables}
+  \item{controls}{{tol = 1E-6, maxiter = 1000} list of runtime variables}
 }
 
 \value{
-  \item{loglik}{log likelihood after convergence}
+  \item{F}{...}
+  \item{L}{...}
+  \item{P}{...}
+  \item{track_c}{...}
+  \item{track_diff}{...}
+  \item{niter}{...}
+  \item{status}{...}
 }
 
 \details{

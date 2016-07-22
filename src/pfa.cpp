@@ -1,6 +1,6 @@
 // Gao Wang and Kushal K. Dey (c) 2016
 #include "pfa.hpp"
-#include <stdexcept>
+#include <iostream>
 
 //! EM algorithm for paired factor analysis
 // @param X [N, J] observed data matrix
@@ -13,33 +13,45 @@
 // @param K [int_pt] number of rows of matrix F and P
 // @param C [int_pt] number of elements in q
 // @param tol [double_pt] tolerance for convergence
+// @param maxiter [int_pt] maximum number of iterations
 // @param niter [int_pt] number of iterations
-// @param loglik [double_pt] log likelihood (return)
+// @param track_c [maxiter, 1] track of convergence (return)
 // @param L [N, K] Loading matrix (return)
+// @param status [int_pt] return status, 0 for good, 1 for error (return)
 
 extern "C" int pfa_em(double *, double *, double *, double *, double *,
-                      int *, int *, int *, int *, double *, int *,
-                      double *, double *);
+                      int *, int *, int *, int *, double *, int *, int *,
+                      double *, double *, int *);
 
 int pfa_em(double * X, double * F, double * P, double * q, double * omega,
-           int * N, int * J, int * K, int * C, double * tol, int * niter,
-           double * loglik, double * L) {
+           int * N, int * J, int * K, int * C, double * tol, int * maxiter, int * niter,
+           double * track_c, double * L, int * status) {
   *niter = 0;
-  double prev = 0, curr = 0;
   PFA model(X, F, P, q, omega, *N, *J, *K, *C);
   // model.print();
-  while (true) {
+  while (*niter <= *maxiter) {
     model.get_log_delta_given_nkq();
-    curr = model.get_loglik_prop();
-    if (curr < prev && *niter > 0) {
-      throw std::runtime_error("EM algorithm error: likelihood decrease!");
+    track_c[*niter] = model.get_loglik_prop();
+    if (*niter > 0) {
+      // check monotonicity
+      if (track_c[*niter] < track_c[(*niter - 1)]) {
+        std::cerr << "[ERROR] likelihood decreased in EM algorithm!" << std::endl;
+        *status = 1;
+        break;
+      }
+      // converged
+      if (track_c[*niter] - track_c[(*niter - 1)] < *tol)
+        break;
     }
-    if (curr - prev < *tol && *niter > 0)
+    if (*niter == *maxiter) {
+      // did not converge
+      *status = 1;
       break;
-    prev = curr;
+    }
     model.update_weights();
     model.update_F();
-    *niter++;
+    (*niter)++;
   }
+  if (*status) std::cerr << "[WARNING] EM algorithm failed to converge!" << std::endl;
   return 0;
 }

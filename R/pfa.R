@@ -21,6 +21,10 @@ pfa <- function(X, K, F = NULL, P = NULL, q = NULL, omega = NULL, controls = NUL
   if (is.null(tol) || tol <= 0) {
     tol <- 1E-6
   }
+  maxiter <- controls$maxiter
+  if (is.null(maxiter) || maxiter <= 5) {
+    maxiter <- 1000
+  }
   ## sanity check
   stopifnot(nrow(F) == K)
   stopifnot(ncol(X) == ncol(F))
@@ -28,9 +32,10 @@ pfa <- function(X, K, F = NULL, P = NULL, q = NULL, omega = NULL, controls = NUL
   stopifnot(nrow(P) == ncol(P))
   stopifnot(length(q) == length(omega))
   ## factor analysis
-  loglik <- 0
+  track_c <- rep(-999, maxiter)
   niter <- 0
   L <- matrix(0, nrow(X), nrow(F))
+  status <- 0
   res <- .C("pfa_em",
             as.double(as.vector(X)),
             F = as.double(as.vector(F)),
@@ -42,10 +47,17 @@ pfa <- function(X, K, F = NULL, P = NULL, q = NULL, omega = NULL, controls = NUL
             as.integer(nrow(F)),
             as.integer(length(q)),
             as.double(tol),
+            as.integer(maxiter),
             niter = as.integer(niter),
-            loglik = as.integer(loglik),
+            track_c = as.double(as.vector(track_c)),
             L = as.double(as.vector(L)),
+            status = as.integer(status),
             PACKAGE = "pfar")
-  # FIXME: need to reshape
-  return(list(loglik = res$loglik, niter = res$niter))
+  ## Process output
+  Fout <- matrix(res$F, nrow(F), ncol(F))
+  Lout <- matrix(res$L, nrow(L), ncol(L))
+  Pout <- matrix(res$P, nrow(P), ncol(P))
+  track_c <- res$track_c[1:(res$niter + 1)]
+  return(list(F = Fout, L = Lout, P = Pout, track_c = track_c, track_diff = diff(track_c),
+              niter = res$niter, status = res$status))
 }
