@@ -31,21 +31,29 @@ public:
     s = arma::vectorise(arma::stddev(D));
     has_F_pair_coord = false;
     L.set_size(D.n_rows, F.n_rows);
+    W.set_size(F.n_rows, F.n_rows);
     log_delta.set_size(D.n_rows, int((F.n_rows - 1) * F.n_rows / 2), q.n_elem);
     avg_delta.set_size(int((P.n_rows - 1) * P.n_rows / 2), q.n_elem);
   }
   ~PFA() {}
 
-  void print() {
-    D.print("Data Matrix:");
-    F.print("Factor Matrix:");
-    P.print("Factor frequency Matrix:");
-    L.print("Loading matrix:");
-    q.print("Membership grids:");
-    omega.print("Membership grid weights:");
-    s.print("Estimated standard deviation of data columns (features):");
-    log_delta.print("Current log(delta) tensor:");
-    avg_delta.print("Current delta averaged over samples:");
+  void print(std::ostream& out, int info) {
+    if (info == 0) {
+      D.print(out, "Data Matrix:");
+      q.print(out, "Membership grids:");
+      s.print(out, "Estimated standard deviation of data columns (features):");
+    }
+    if (info == 1) {
+      F.print(out, "Factor Matrix:");
+      P.print(out, "Factor frequency Matrix:");
+      L.print(out, "Loading matrix:");
+      W.print(out, "E[L'L] matrix:");
+      omega.print(out, "Membership grid weights:");
+    }
+    if (info == 2) {
+      log_delta.print(out, "log(delta) tensor:");
+      avg_delta.print(out, "delta averaged over samples:");
+    }
   }
 
   void get_log_delta_given_nkq() {
@@ -112,7 +120,7 @@ public:
     // Need to compute 2 matrices in order to solve F
     // The loading, L is N X K matrix; W = L'L is K X K matrix
     L.fill(0);
-    arma::mat W(F.n_rows, F.n_rows, arma::fill::zeros);
+    W.fill(0);
     for (size_t k = 0; k < F.n_rows; k++) {
       // I. First we compute the k-th column for E(L), the N X K matrix:
       // generate the proper input for 1 X K %*% K X N
@@ -184,5 +192,6 @@ private:
   std::map<std::pair<int,int>, int> F_pair_coord;
   bool has_F_pair_coord;
   arma::mat L;
+  arma::mat W;
 };
 #endif

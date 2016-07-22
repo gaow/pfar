@@ -1,4 +1,4 @@
-pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, controls = NULL) {
+pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control = NULL) {
   ## Initialize data
   if (is.null(F) && is.null(K)) {
     stop("[ERROR] Please either provide K or F!")
@@ -22,13 +22,22 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
   if (is.null(omega)) {
     omega <- rep(1/length(q), length(q))
   }
-  tol <- controls$tol
+  tol <- control$tol
   if (is.null(tol) || tol <= 0) {
     tol <- 1E-6
   }
-  maxiter <- controls$maxiter
+  maxiter <- control$maxiter
   if (is.null(maxiter) || maxiter <= 5) {
     maxiter <- 1000
+  }
+  logfile <- control$logfile
+  if (is.null(logfile)) {
+    f1 <- n_f1 <- f2 <- n_f2 <- 0
+  } else {
+    f1 <- charToRaw(paste(logfile, "result.log", sep = "_"))
+    f2 <- charToRaw(paste(logfile, "likelihood.log", sep = "_"))
+    n_f1 <- length(f1)
+    n_f2 <- length(f2)
   }
   ## sanity check
   stopifnot(nrow(F) == K)
@@ -57,13 +66,17 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
             track_c = as.double(as.vector(track_c)),
             L = as.double(as.vector(L)),
             status = as.integer(status),
+            as.integer(as.vector(f1)),
+            as.integer(n_f1),
+            as.integer(as.vector(f2)),
+            as.integer(n_f2),
             PACKAGE = "pfar")
   ## Process output
   Fout <- matrix(res$F, nrow(F), ncol(F))
   Lout <- matrix(res$L, nrow(L), ncol(L))
   Pout <- matrix(res$P, nrow(P), ncol(P))
   track_c <- res$track_c[1:(res$niter + 1)]
-  return(list(F = Fout, L = Lout, P = Pout, Q = res$omega,
+  return(list(F = Fout, L = Lout, P = Pout, Omega = res$omega,
               track_c = track_c, loglik_diff = diff(track_c),
               niter = res$niter, status = res$status))
 }

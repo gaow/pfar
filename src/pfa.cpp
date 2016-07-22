@@ -1,6 +1,9 @@
 // Gao Wang and Kushal K. Dey (c) 2016
 #include "pfa.hpp"
 #include <iostream>
+#include <fstream>
+#include <cstdio>
+#include <ctime>
 
 //! EM algorithm for paired factor analysis
 // @param X [N, J] observed data matrix
@@ -18,22 +21,69 @@
 // @param track_c [maxiter, 1] track of convergence (return)
 // @param L [N, K] Loading matrix (return)
 // @param status [int_pt] return status, 0 for good, 1 for error (return)
+// @param logfn_1 [int_pt] log file 1 name as integer converted from character array
+// @param nlf_1 [int_pt] length of above
+// @param logfn_2 [int_pt] log file 2 name as integer converted from character array
+// @param nlf_2 [int_pt] length of above
 
 extern "C" int pfa_em(double *, double *, double *, double *, double *,
                       int *, int *, int *, int *, double *, int *, int *,
-                      double *, double *, int *);
+                      double *, double *, int *,
+                      int *, int *, int *, int *);
 
 int pfa_em(double * X, double * F, double * P, double * q, double * omega,
            int * N, int * J, int * K, int * C, double * tol, int * maxiter, int * niter,
-           double * track_c, double * L, int * status) {
+           double * track_c, double * L, int * status,
+           int * logfn_1, int * nlf_1, int * logfn_2, int * nlf_2) {
+  //
+  // Set up logfiles
+  //
+  bool keeplog = (*nlf_1 > 0) ? true : false;
+  std::fstream f1;
+  std::fstream f2;
+  if (keeplog) {
+    char f1_log[(*nlf_1) + 1];
+    char f2_log[(*nlf_2) + 1];
+    for (int i = 0; i < *nlf_1; i++)
+      f1_log[i] = (char) *(logfn_1 + i);
+    for (int i = 0; i < *nlf_2; i++)
+      f2_log[i] = (char) *(logfn_2 + i);
+    f1_log[*nlf_1] = '\0';
+    f2_log[*nlf_2] = '\0';
+    f1.open(f1_log, std::fstream::out);
+    f2.open(f2_log, std::fstream::out);
+    time_t now;
+    time(&now);
+    f1 << "#\n# " << asctime(localtime(&now)) << "#\n\n";
+    f2 << "#\n# " << asctime(localtime(&now)) << "#\n\n";
+    f1.close();
+    f2.close();
+    f1.open(f1_log, std::fstream::app);
+    f2.open(f2_log, std::fstream::app);
+  }
+  //
+  // Fit model via EM
+  //
   *niter = 0;
   PFA model(X, F, P, q, omega, L, *N, *J, *K, *C);
-  // model.print();
+  model.print(f1, 0);
   while (*niter <= *maxiter) {
     model.get_log_delta_given_nkq();
+    model.update_weights();
+    model.update_F();
+    if (keeplog) {
+      f1 << "#----------------------------------\n";
+      f1 << "# Iteration " << (*niter) + 1 << "\n";
+      f1 << "#----------------------------------\n";
+      model.print(f1, 1);
+      f2 << "#----------------------------------\n";
+      f2 << "# Iteration " << (*niter) + 1 << "\n";
+      f2 << "#----------------------------------\n";
+      model.print(f2, 2);
+    }
     track_c[*niter] = model.get_loglik_prop();
     if (*niter > 0) {
-      double diff = track_c[*niter] - track_c[(*niter - 1)];
+      double diff = track_c[*niter] - track_c[(*niter) - 1];
       // check monotonicity
       if (diff < 0.0) {
         std::cerr << "[ERROR] likelihood decreased in EM algorithm!" << std::endl;
@@ -49,10 +99,13 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
       *status = 1;
       break;
     }
-    model.update_weights();
-    model.update_F();
     (*niter)++;
   }
-  if (*status) std::cerr << "[WARNING] EM algorithm failed to converge!" << std::endl;
+  if (*status)
+    std::cerr << "[WARNING] EM algorithm failed to converge!" << std::endl;
+  if (keeplog) {
+    f1.close();
+    f2.close();
+  }
   return 0;
 }
