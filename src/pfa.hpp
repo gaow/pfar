@@ -82,8 +82,8 @@ public:
           }
           col_cnt++;
         }
-        has_F_pair_coord = true;
       }
+      has_F_pair_coord = true;
     }
   }
 
