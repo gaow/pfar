@@ -18,11 +18,12 @@ extern "C" int pfa_em(double *, double *, double *, double *, double *,
 
 int pfa_em(double * X, double * F, double * P, double * q, double * omega,
            int * N, int * J, int * K, int * C, double * loglik) {
-  double prev = curr = 0;
+  double prev = 0, curr = 0;
   PFA model(X, F, P, q, omega, *N, *J, *K, *C);
   model.get_log_delta_given_nkq();
   curr = model.get_loglik_prop();
   model.update_weights();
+  model.update_F();
   model.print();
   return 0;
 }
