@@ -68,7 +68,7 @@ public:
           arma::vec Dn_llik = arma::zeros<arma::vec>(D.n_rows);
           for (size_t j = 0; j < D.n_cols; j++) {
             arma::vec density = D.col(j);
-            double m = q.at(qq) * F.at(k1, j) + (1 - q.at(qq)) * F.at(k2, j);
+            double m = q.at(qq) * F.at(k2, j) + (1 - q.at(qq)) * F.at(k1, j);
             double sig = s.at(j);
             Dn_llik += density.transform( [=](double x) { return (normal_pdf_log(x, m, sig)); } );
           }
