@@ -58,6 +58,6 @@ pfa <- function(X, K, F = NULL, P = NULL, q = NULL, omega = NULL, controls = NUL
   Lout <- matrix(res$L, nrow(L), ncol(L))
   Pout <- matrix(res$P, nrow(P), ncol(P))
   track_c <- res$track_c[1:(res$niter + 1)]
-  return(list(F = Fout, L = Lout, P = Pout, track_c = track_c, track_diff = diff(track_c),
+  return(list(F = Fout, L = Lout, P = Pout, track_c = track_c, loglik_diff = diff(track_c),
               niter = res$niter, status = res$status))
 }

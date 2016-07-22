@@ -22,7 +22,7 @@ pfa(X)
   \item{L}{...}
   \item{P}{...}
   \item{track_c}{...}
-  \item{track_diff}{...}
+  \item{loglik_diff}{...}
   \item{niter}{...}
   \item{status}{...}
 }
