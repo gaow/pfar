@@ -40,6 +40,7 @@ public:
     D.print("Data Matrix:");
     F.print("Factor Matrix:");
     P.print("Factor frequency Matrix:");
+    L.print("Loading matrix:");
     q.print("Membership grids:");
     omega.print("Membership grid weights:");
     s.print("Estimated standard deviation of data columns (features):");
