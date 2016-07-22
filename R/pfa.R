@@ -1,4 +1,4 @@
-pfa <- function(X, K, F = NULL, P = NULL, q = NULL, omega = NULL) {
+pfa <- function(X, K, F = NULL, P = NULL, q = NULL, omega = NULL, controls = NULL) {
   ## Initialize data
   if (is.null(F)) {
     # Initialize F with K factors all equal to the column mean of input X
@@ -17,6 +17,10 @@ pfa <- function(X, K, F = NULL, P = NULL, q = NULL, omega = NULL) {
   if (is.null(omega)) {
     omega <- rep(1/length(q), length(q))
   }
+  tol <- controls$tol
+  if (is.null(tol) || tol <= 0) {
+    tol <- 1E-6
+  }
   ## sanity check
   stopifnot(nrow(F) == K)
   stopifnot(ncol(X) == ncol(F))
@@ -25,17 +29,23 @@ pfa <- function(X, K, F = NULL, P = NULL, q = NULL, omega = NULL) {
   stopifnot(length(q) == length(omega))
   ## factor analysis
   loglik <- 0
+  niter <- 0
+  L <- matrix(0, nrow(X), nrow(F))
   res <- .C("pfa_em",
             as.double(as.vector(X)),
-            as.double(as.vector(F)),
-            as.double(as.vector(P)),
+            F = as.double(as.vector(F)),
+            P = as.double(as.vector(P)),
             as.double(as.vector(q)),
             as.double(as.vector(omega)),
             as.integer(nrow(X)),
             as.integer(ncol(X)),
             as.integer(nrow(F)),
             as.integer(length(q)),
+            as.double(tol),
+            niter = as.integer(niter),
             loglik = as.integer(loglik),
+            L = as.double(as.vector(L)),
             PACKAGE = "pfar")
-  return(res$loglik)
+  # FIXME: need to reshape
+  return(list(loglik = res$loglik, niter = res$niter))
 }

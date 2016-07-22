@@ -21,15 +21,18 @@ inline double normal_pdf_log(double x, double m, double s)
 
 class PFA {
 public:
-  PFA(double * X, double * F, double * P, double * q, double * omega,
+  PFA(double * X, double * FF, double * PP, double * Q, double * omega,
       int N, int J, int K, int C):
     // mat(aux_mem*, n_rows, n_cols, copy_aux_mem = true, strict = true)
-    D(X, N, J, false, true), F(F, K, J, false, true),
-    P(P, K, K, false, true), q(q, C, false, true),
+    D(X, N, J, false, true), F(FF, K, J, false, true),
+    P(PP, K, K, false, true), q(Q, C, false, true),
     omega(omega, C, false, true)
   {
     s = arma::vectorise(arma::stddev(D));
     has_F_pair_coord = false;
+    L.set_size(D.n_rows, F.n_rows);
+    log_delta.set_size(D.n_rows, int((F.n_rows - 1) * F.n_rows / 2), q.n_elem);
+    avg_delta.set_size(int((P.n_rows - 1) * P.n_rows / 2), q.n_elem);
   }
   ~PFA() {}
 
@@ -47,7 +50,6 @@ public:
   void get_log_delta_given_nkq() {
     // this computes delta up to a normalizing constant
     // this results in a N by k1k2 by q tensor of loglik
-    log_delta.reshape(D.n_rows, int((F.n_rows - 1) * F.n_rows / 2), q.n_elem);
     for (size_t qq = 0; qq < q.n_elem; qq++) {
       size_t col_cnt = 0;
       for (size_t k1 = 0; k1 < F.n_rows; k1++) {
@@ -85,7 +87,6 @@ public:
     // update P and omega
     // this results in a K1K2 by q matrix of avglik
     // which equals pi_k1k2 * omega_q
-    avg_delta.reshape(int((P.n_rows - 1) * P.n_rows / 2), q.n_elem);
     arma::cube slice_rowsums = arma::sum(arma::exp(log_delta));
     for (size_t qq = 0; qq < q.n_elem; qq++) {
       avg_delta.col(qq) = arma::vectorise(slice_rowsums.slice(qq)) / D.n_rows;
@@ -109,7 +110,7 @@ public:
     // F, the K by J matrix, is to be updated here
     // Need to compute 2 matrices in order to solve F
     // The loading, L is N X K matrix; W = L'L is K X K matrix
-    arma::mat L(D.n_rows, F.n_rows, arma::fill::zeros);
+    L.fill(0);
     arma::mat W(F.n_rows, F.n_rows, arma::fill::zeros);
     for (size_t k = 0; k < F.n_rows; k++) {
       // I. First we compute the k-th column for E(L), the N X K matrix:
@@ -181,5 +182,6 @@ private:
   arma::mat avg_delta;
   std::map<std::pair<int,int>, int> F_pair_coord;
   bool has_F_pair_coord;
+  arma::mat L;
 };
 #endif

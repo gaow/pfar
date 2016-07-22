@@ -14,6 +14,7 @@ pfa(X)
   \item{P}{[K, K] initial factor pair frequency matrix}
   \item{q}{[C, 1] initial vector of possible membership loadings, a discrete set}
   \item{omega}{[C, 1] initial weight of membership loadings, a discrete set corresponding to q}
+  \item(controls){{tol = ...} list of runtime variables}
 }
 
 \value{

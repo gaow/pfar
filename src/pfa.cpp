@@ -1,5 +1,6 @@
 // Gao Wang and Kushal K. Dey (c) 2016
 #include "pfa.hpp"
+#include <stdexcept>
 
 //! EM algorithm for paired factor analysis
 // @param X [N, J] observed data matrix
@@ -11,19 +12,34 @@
 // @param J [int_pt] number of columns of matrix X and F
 // @param K [int_pt] number of rows of matrix F and P
 // @param C [int_pt] number of elements in q
-// @param loglik [double_pt] log likelihood
+// @param tol [double_pt] tolerance for convergence
+// @param niter [int_pt] number of iterations
+// @param loglik [double_pt] log likelihood (return)
+// @param L [N, K] Loading matrix (return)
 
 extern "C" int pfa_em(double *, double *, double *, double *, double *,
-                      int *, int *, int *, int *, double * loglik);
+                      int *, int *, int *, int *, double *, int *,
+                      double *, double *);
 
 int pfa_em(double * X, double * F, double * P, double * q, double * omega,
-           int * N, int * J, int * K, int * C, double * loglik) {
+           int * N, int * J, int * K, int * C, double * tol, int * niter,
+           double * loglik, double * L) {
+  *niter = 0;
   double prev = 0, curr = 0;
   PFA model(X, F, P, q, omega, *N, *J, *K, *C);
-  model.get_log_delta_given_nkq();
-  curr = model.get_loglik_prop();
-  model.update_weights();
-  model.update_F();
-  model.print();
+  // model.print();
+  while (true) {
+    model.get_log_delta_given_nkq();
+    curr = model.get_loglik_prop();
+    if (curr < prev && *niter > 0) {
+      throw std::runtime_error("EM algorithm error: likelihood decrease!");
+    }
+    if (curr - prev < *tol && *niter > 0)
+      break;
+    prev = curr;
+    model.update_weights();
+    model.update_F();
+    *niter++;
+  }
   return 0;
 }
