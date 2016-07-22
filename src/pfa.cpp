@@ -33,14 +33,15 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
     model.get_log_delta_given_nkq();
     track_c[*niter] = model.get_loglik_prop();
     if (*niter > 0) {
+      double diff = track_c[*niter] - track_c[(*niter - 1)];
       // check monotonicity
-      if (track_c[*niter] < track_c[(*niter - 1)]) {
+      if (diff < 0.0) {
         std::cerr << "[ERROR] likelihood decreased in EM algorithm!" << std::endl;
         *status = 1;
         break;
       }
       // converged
-      if (track_c[*niter] - track_c[(*niter - 1)] < *tol)
+      if (diff < *tol)
         break;
     }
     if (*niter == *maxiter) {

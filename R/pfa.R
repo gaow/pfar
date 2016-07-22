@@ -46,7 +46,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
             F = as.double(as.vector(F)),
             P = as.double(as.vector(P)),
             as.double(as.vector(q)),
-            as.double(as.vector(omega)),
+            omega = as.double(as.vector(omega)),
             as.integer(nrow(X)),
             as.integer(ncol(X)),
             as.integer(nrow(F)),
@@ -63,6 +63,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
   Lout <- matrix(res$L, nrow(L), ncol(L))
   Pout <- matrix(res$P, nrow(P), ncol(P))
   track_c <- res$track_c[1:(res$niter + 1)]
-  return(list(F = Fout, L = Lout, P = Pout, track_c = track_c, loglik_diff = diff(track_c),
+  return(list(F = Fout, L = Lout, P = Pout, Q = res$omega,
+              track_c = track_c, loglik_diff = diff(track_c),
               niter = res$niter, status = res$status))
 }
