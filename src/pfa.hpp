@@ -119,8 +119,6 @@ public:
     // F, the K by J matrix, is to be updated here
     // Need to compute 2 matrices in order to solve F
     // The loading, L is N X K matrix; W = L'L is K X K matrix
-    L.fill(0);
-    W.fill(0);
     for (size_t k = 0; k < F.n_rows; k++) {
       // I. First we compute the k-th column for E(L), the N X K matrix:
       // generate the proper input for 1 X K %*% K X N
