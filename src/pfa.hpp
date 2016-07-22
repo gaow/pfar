@@ -22,11 +22,11 @@ inline double normal_pdf_log(double x, double m, double s)
 class PFA {
 public:
   PFA(double * cX, double * cF, double * cP, double * cQ, double * omega,
-      int N, int J, int K, int C):
+      double * cLout, int N, int J, int K, int C):
     // mat(aux_mem*, n_rows, n_cols, copy_aux_mem = true, strict = true)
     D(cX, N, J, false, true), F(cF, K, J, false, true),
     P(cP, K, K, false, true), q(cQ, C, false, true),
-    omega(omega, C, false, true)
+    omega(omega, C, false, true), L(cLout, N, K, false, true)
   {
     s = arma::vectorise(arma::stddev(D));
     has_F_pair_coord = false;

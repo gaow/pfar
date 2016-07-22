@@ -12,7 +12,7 @@ pfar.so: obj
 obj:
 	$(CXX) $(CXXFLAGS) $(RLIB_FLAGS) -c $(SRC_FILES)
 
-pfa: main.cpp
+play: main.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $< $(LINK_FLAGS)
 
 .PHONY: clean

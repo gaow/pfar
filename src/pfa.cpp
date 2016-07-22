@@ -27,7 +27,7 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
            int * N, int * J, int * K, int * C, double * tol, int * maxiter, int * niter,
            double * track_c, double * L, int * status) {
   *niter = 0;
-  PFA model(X, F, P, q, omega, *N, *J, *K, *C);
+  PFA model(X, F, P, q, omega, L, *N, *J, *K, *C);
   // model.print();
   while (*niter <= *maxiter) {
     model.get_log_delta_given_nkq();
