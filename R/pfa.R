@@ -27,7 +27,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
     tol <- 1E-6
   }
   maxiter <- control$maxiter
-  if (is.null(maxiter) || maxiter <= 5) {
+  if (is.null(maxiter) || maxiter <= 0) {
     maxiter <- 1000
   }
   logfile <- control$logfile
@@ -75,7 +75,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
   Fout <- matrix(res$F, nrow(F), ncol(F))
   Lout <- matrix(res$L, nrow(L), ncol(L))
   Pout <- matrix(res$P, nrow(P), ncol(P))
-  track_c <- res$track_c[1:(res$niter + 1)]
+  track_c <- res$track_c[1:res$niter]
   return(list(F = Fout, L = Lout, P = Pout, Omega = res$omega,
               track_c = track_c, loglik_diff = diff(track_c),
               niter = res$niter, status = res$status))

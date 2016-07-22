@@ -71,19 +71,20 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
     model.get_log_delta_given_nkq();
     model.update_weights();
     model.update_F();
+    track_c[*niter] = model.get_loglik_prop();
+    (*niter)++;
     if (keeplog) {
       f1 << "#----------------------------------\n";
-      f1 << "# Iteration " << (*niter) + 1 << "\n";
+      f1 << "# Iteration " << *niter << "\n";
       f1 << "#----------------------------------\n";
       model.print(f1, 1);
       f2 << "#----------------------------------\n";
-      f2 << "# Iteration " << (*niter) + 1 << "\n";
+      f2 << "# Iteration " << *niter << "\n";
       f2 << "#----------------------------------\n";
       model.print(f2, 2);
     }
-    track_c[*niter] = model.get_loglik_prop();
-    if (*niter > 0) {
-      double diff = track_c[*niter] - track_c[(*niter) - 1];
+    if (*niter > 1) {
+      double diff = track_c[(*niter) - 1] - track_c[(*niter) - 2];
       // check monotonicity
       if (diff < 0.0) {
         std::cerr << "[ERROR] likelihood decreased in EM algorithm!" << std::endl;
@@ -99,7 +100,6 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
       *status = 1;
       break;
     }
-    (*niter)++;
   }
   if (*status)
     std::cerr << "[WARNING] EM algorithm failed to converge!" << std::endl;
