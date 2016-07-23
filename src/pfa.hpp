@@ -3,6 +3,7 @@
 
 #include <armadillo>
 #include <map>
+#include <omp.h>
 
 static const double INV_SQRT_2PI = 0.3989422804014327;
 static const double INV_SQRT_2PI_LOG = -0.91893853320467267;
@@ -34,6 +35,7 @@ public:
     W.set_size(F.n_rows, F.n_rows);
     log_delta.set_size(D.n_rows, int((F.n_rows - 1) * F.n_rows / 2), q.n_elem);
     avg_delta.set_size(int((P.n_rows - 1) * P.n_rows / 2), q.n_elem);
+    n_threads = 1;
   }
   ~PFA() {}
 
@@ -56,9 +58,14 @@ public:
     }
   }
 
+  void set_threads(int n) {
+    n_threads = n;
+  }
+
   void get_log_delta_given_nkq() {
     // this computes delta up to a normalizing constant
     // this results in a N by k1k2 by q tensor of loglik
+#pragma omp parallel for num_threads(n_threads)
     for (size_t qq = 0; qq < q.n_elem; qq++) {
       size_t col_cnt = 0;
       for (size_t k1 = 0; k1 < F.n_rows; k1++) {
@@ -97,6 +104,7 @@ public:
     // this results in a K1K2 by q matrix of avglik
     // which equals pi_k1k2 * omega_q
     arma::cube slice_rowsums = arma::sum(arma::exp(log_delta));
+#pragma omp parallel for num_threads(n_threads)
     for (size_t qq = 0; qq < q.n_elem; qq++) {
       avg_delta.col(qq) = arma::vectorise(slice_rowsums.slice(qq)) / D.n_rows;
     }
@@ -104,6 +112,7 @@ public:
     arma::vec pik1k2 = arma::sum(avg_delta, 1);
     pik1k2 = pik1k2 / arma::sum(pik1k2);
     size_t col_cnt = 0;
+#pragma omp parallel for num_threads(n_threads)
     for (size_t k1 = 0; k1 < P.n_rows; k1++) {
       for (size_t k2 = 0; k2 < k1; k2++) {
         P.at(k1, k2) = pik1k2.at(col_cnt);
@@ -129,6 +138,7 @@ public:
       // Because we need to sum over all N and we have computed this before,
       // we can work with avg_delta (K1K2 X q) instead of log_delta the tensor
       // we need to loop over the q slices
+#pragma omp parallel for num_threads(n_threads)
       for (size_t qq = 0; qq < q.n_elem; qq++) {
         // I. ........................................
         // create the left hand side Lk1, a 1 X K matrix
@@ -166,6 +176,7 @@ public:
     // it involves on the LHS a vector of [q1(1-q1), q2(1-q2) ...]
     // and on the RHS for each pair of (k1, k2) the corresponding row from avg_delta
     arma::vec LHS = q.transform( [](double val) { return (val * (1.0 - val)); } );
+#pragma omp parallel for num_threads(n_threads)
     for (size_t k1 = 0; k1 < F.n_rows; k1++) {
       for (size_t k2 = 0; k2 < k1; k2++) {
         arma::vec RHS = arma::vectorise(D.n_rows * avg_delta.row(F_pair_coord[std::make_pair(k1, k2)]));
@@ -192,5 +203,7 @@ private:
   bool has_F_pair_coord;
   arma::mat L;
   arma::mat W;
+  // number of threads
+  int n_threads;
 };
 #endif

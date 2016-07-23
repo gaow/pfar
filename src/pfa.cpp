@@ -25,16 +25,17 @@
 // @param nlf_1 [int_pt] length of above
 // @param logfn_2 [int_pt] log file 2 name as integer converted from character array
 // @param nlf_2 [int_pt] length of above
+// @param n_threads [int_pt] number of threads for parallel processing
 
 extern "C" int pfa_em(double *, double *, double *, double *, double *,
                       int *, int *, int *, int *, double *, int *, int *,
                       double *, double *, int *,
-                      int *, int *, int *, int *);
+                      int *, int *, int *, int *, int *);
 
 int pfa_em(double * X, double * F, double * P, double * q, double * omega,
            int * N, int * J, int * K, int * C, double * tol, int * maxiter, int * niter,
            double * track_c, double * L, int * status,
-           int * logfn_1, int * nlf_1, int * logfn_2, int * nlf_2) {
+           int * logfn_1, int * nlf_1, int * logfn_2, int * nlf_2, int * n_threads) {
   //
   // Set up logfiles
   //
@@ -66,6 +67,7 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
   //
   *niter = 0;
   PFA model(X, F, P, q, omega, L, *N, *J, *K, *C);
+  model.set_threads(*n_threads);
   model.print(f1, 0);
   while (*niter <= *maxiter) {
     model.get_log_delta_given_nkq();
