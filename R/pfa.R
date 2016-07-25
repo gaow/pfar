@@ -23,15 +23,15 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
     omega <- rep(1/length(q), length(q))
   }
   tol <- as.double(control$tol)
-  if (tol <= 0) {
+  if (length(tol) == 0 || tol <= 0) {
     tol <- 1E-6
   }
   maxiter <- as.integer(control$maxiter)
-  if (maxiter <= 0) {
+  if (length(maxiter) == 0 || maxiter <= 0) {
     maxiter <- 1000
   }
   n_cpu <- as.integer(control$n_cpu)
-  if (n_cpu <= 0) {
+  if (length(n_cpu) == 0 || n_cpu <= 0) {
     n_cpu <- 1
   }
   logfile <- control$logfile

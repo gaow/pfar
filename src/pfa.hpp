@@ -30,12 +30,21 @@ public:
     omega(omega, C, false, true), L(cLout, N, K, false, true)
   {
     s = arma::vectorise(arma::stddev(D));
-    has_F_pair_coord = false;
     L.set_size(D.n_rows, F.n_rows);
     W.set_size(F.n_rows, F.n_rows);
     log_delta.set_size(D.n_rows, int((F.n_rows - 1) * F.n_rows / 2), q.n_elem);
     avg_delta.set_size(int((P.n_rows - 1) * P.n_rows / 2), q.n_elem);
     n_threads = 1;
+    // set factor pair coordinates in the tensor
+    // to avoid having to compute it at each iteration
+    for (size_t k1 = 0; k1 < F.n_rows; k1++) {
+      for (size_t k2 = 0; k2 < k1; k2++) {
+        // (b - 1) * b / 2 - ((b - 1) - a)
+        size_t col_cnt = size_t(k1 * (k1 - 1) / 2 + k2);
+        F_pair_coord[std::make_pair(k1, k2)] = col_cnt;
+        F_pair_coord[std::make_pair(k2, k1)] = col_cnt;
+      }
+    }
   }
   ~PFA() {}
 
@@ -67,7 +76,6 @@ public:
     // this results in a N by k1k2 by q tensor of loglik
 #pragma omp parallel for num_threads(n_threads)
     for (size_t qq = 0; qq < q.n_elem; qq++) {
-      size_t col_cnt = 0;
       for (size_t k1 = 0; k1 < F.n_rows; k1++) {
         for (size_t k2 = 0; k2 < k1; k2++) {
           // given k1, k2 and q, density is a N-vector
@@ -81,16 +89,10 @@ public:
           }
           Dn_llik = Dn_llik + (std::log(P.at(k1, k2)) + std::log(omega.at(qq)));
           // populate the tensor
+          size_t col_cnt = size_t(k1 * (k1 - 1) / 2 + k2);
           log_delta.slice(qq).col(col_cnt) = Dn_llik;
-          // set factor pair coordinates in the tensor
-          if (!has_F_pair_coord) {
-            F_pair_coord[std::make_pair(k1, k2)] = col_cnt;
-            F_pair_coord[std::make_pair(k2, k1)] = col_cnt;
-          }
-          col_cnt++;
         }
       }
-      has_F_pair_coord = true;
     }
   }
 
@@ -111,12 +113,11 @@ public:
     // sum over q grids
     arma::vec pik1k2 = arma::sum(avg_delta, 1);
     pik1k2 = pik1k2 / arma::sum(pik1k2);
-    size_t col_cnt = 0;
 #pragma omp parallel for num_threads(n_threads)
     for (size_t k1 = 0; k1 < P.n_rows; k1++) {
       for (size_t k2 = 0; k2 < k1; k2++) {
+        size_t col_cnt = size_t(k1 * (k1 - 1) / 2 + k2);
         P.at(k1, k2) = pik1k2.at(col_cnt);
-        col_cnt++;
       }
     }
     // sum over (k1, k2)
@@ -199,8 +200,7 @@ private:
   arma::cube log_delta;
   // K1K2 by q matrix
   arma::mat avg_delta;
-  std::map<std::pair<int,int>, int> F_pair_coord;
-  bool has_F_pair_coord;
+  std::map<std::pair<size_t, size_t>, size_t> F_pair_coord;
   arma::mat L;
   arma::mat W;
   // number of threads
