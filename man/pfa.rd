@@ -42,6 +42,6 @@ pfa(X)
 library("pfar")
 # ?pfa
 dat = readRDS('vignettes/example_data.rds')
-control = list(logfile = 'example_data.pfa')
+control = list(logfile = 'example_data.pfa', n_cpu = 8)
 pfa(dat$X, K = 15, control = control)
 }
