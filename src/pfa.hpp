@@ -59,11 +59,11 @@ public:
       F.print(out, "Factor Matrix:");
       P.print(out, "Factor frequency Matrix:");
       L.print(out, "Loading matrix:");
-      W.print(out, "E[L'L] matrix:");
-      omega.print(out, "Membership grid weights:");
+      omega.print(out, "Membership grid weight:");
     }
     if (info == 2) {
-      pi_mat.print(out, "delta averaged over samples:");
+      pi_mat.print(out, "delta averaged over samples (joint weight for factor pairs and membership grid):");
+      W.print(out, "E[L'L] matrix:");
     }
   }
 

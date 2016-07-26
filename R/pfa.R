@@ -38,8 +38,8 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
   if (is.null(logfile)) {
     f1 <- n_f1 <- f2 <- n_f2 <- 0
   } else {
-    f1 <- charToRaw(paste(logfile, "result.log", sep = "."))
-    f2 <- charToRaw(paste(logfile, "likelihood.log", sep = "."))
+    f1 <- charToRaw(paste(logfile, "updates.log", sep = "."))
+    f2 <- charToRaw(paste(logfile, "debug.log", sep = "."))
     n_f1 <- length(f1)
     n_f2 <- length(f2)
   }
