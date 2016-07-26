@@ -70,10 +70,10 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
   model.set_threads(*n_threads);
   model.print(f1, 0);
   while (*niter <= *maxiter) {
-    model.get_log_delta_given_nkq();
+    model.get_loglik_given_nkq();
     model.update_weights();
-    model.update_F();
-    track_c[*niter] = model.get_loglik_prop();
+    model.update_LF();
+    track_c[*niter] = model.get_loglik();
     (*niter)++;
     if (keeplog) {
       f1 << "#----------------------------------\n";
