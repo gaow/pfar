@@ -50,7 +50,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
   stopifnot(nrow(P) == ncol(P))
   stopifnot(length(q) == length(omega))
   ## factor analysis
-  track_c <- rep(-999, maxiter)
+  loglik <- rep(-999, maxiter)
   niter <- 0
   L <- matrix(0, nrow(X), nrow(F))
   status <- 0
@@ -67,7 +67,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
             as.double(tol),
             as.integer(maxiter),
             niter = as.integer(niter),
-            track_c = as.double(as.vector(track_c)),
+            loglik = as.double(as.vector(loglik)),
             L = as.double(as.vector(L)),
             status = as.integer(status),
             as.integer(as.vector(f1)),
@@ -80,8 +80,8 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
   Fout <- matrix(res$F, nrow(F), ncol(F))
   Lout <- matrix(res$L, nrow(L), ncol(L))
   Pout <- matrix(res$P, nrow(P), ncol(P))
-  track_c <- res$track_c[1:res$niter]
+  loglik <- res$loglik[1:res$niter]
   return(list(F = Fout, L = Lout, P = Pout, Omega = res$omega,
-              track_c = track_c, loglik_diff = diff(track_c),
+              loglik = loglik, loglik_diff = diff(loglik),
               niter = res$niter, status = res$status))
 }

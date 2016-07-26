@@ -4,7 +4,6 @@
 #include <armadillo>
 #include <map>
 #include <omp.h>
-#include <iostream>
 
 static const double INV_SQRT_2PI = 0.3989422804014327;
 static const double INV_SQRT_2PI_LOG = -0.91893853320467267;

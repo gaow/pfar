@@ -18,7 +18,7 @@
 // @param tol [double_pt] tolerance for convergence
 // @param maxiter [int_pt] maximum number of iterations
 // @param niter [int_pt] number of iterations
-// @param track_c [maxiter, 1] track of convergence (return)
+// @param loglik [maxiter, 1] log likelihood, track of convergence (return)
 // @param L [N, K] Loading matrix (return)
 // @param status [int_pt] return status, 0 for good, 1 for error (return)
 // @param logfn_1 [int_pt] log file 1 name as integer converted from character array
@@ -34,7 +34,7 @@ extern "C" int pfa_em(double *, double *, double *, double *, double *,
 
 int pfa_em(double * X, double * F, double * P, double * q, double * omega,
            int * N, int * J, int * K, int * C, double * tol, int * maxiter, int * niter,
-           double * track_c, double * L, int * status,
+           double * loglik, double * L, int * status,
            int * logfn_1, int * nlf_1, int * logfn_2, int * nlf_2, int * n_threads) {
   //
   // Set up logfiles
@@ -73,7 +73,7 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
     model.get_loglik_given_nkq();
     model.update_weights();
     model.update_LF();
-    track_c[*niter] = model.get_loglik();
+    loglik[*niter] = model.get_loglik();
     (*niter)++;
     if (keeplog) {
       f1 << "#----------------------------------\n";
@@ -86,7 +86,7 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
       model.print(f2, 2);
     }
     if (*niter > 1) {
-      double diff = track_c[(*niter) - 1] - track_c[(*niter) - 2];
+      double diff = loglik[(*niter) - 1] - loglik[(*niter) - 2];
       // check monotonicity
       if (diff < 0.0) {
         std::cerr << "[ERROR] likelihood decreased in EM algorithm!" << std::endl;
