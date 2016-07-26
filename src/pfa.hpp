@@ -51,7 +51,7 @@ public:
 
   void print(std::ostream& out, int info) {
     if (info == 0) {
-      D.print(out, "Data Matrix:");
+      // D.print(out, "Data Matrix:");
       q.print(out, "Membership grids:");
       s.print(out, "Estimated standard deviation of data columns (features):");
     }
@@ -118,7 +118,6 @@ public:
       loglik_vec.at(n) = std::log(arma::accu(arma::exp(loglik_mat.slice(n))));
     }
     pi_mat = arma::sum(delta, 2) / D.n_rows;
-    pi_mat = pi_mat / arma::accu(pi_mat);
     loglik = arma::accu(loglik_vec);
   }
 
@@ -152,56 +151,43 @@ public:
     // Need to compute 2 matrices in order to solve F
     // The loading, L is N X K matrix; W = L'L is K X K matrix
     L.fill(0);
+    arma::mat L2 = L;
+    // FIXME: bad parallel
+#pragma omp parallel for num_threads(n_threads)
     for (size_t k = 0; k < F.n_rows; k++) {
       // I. First we compute the k-th column for E(L), the N X K matrix:
-      // generate the proper input for 1 X K %*% K X N
-      // where the 1 X K matrix is loadings Lk consisting of q or (1-q)
-      // and the K X N matrix is the delta for a corresponding subset of a slice from delta
+      // generate the proper input for N X C %*% C X 1
+      // where the N X C matrix is taken from delta given K1K2
+      // and the C X 1 matrix correspond to the grid of q
       // II. Then we compute the diagonal elements for E(W), the K X K matrix
-      // Because we need to sum over all N and we have computed this before,
-      // we can work with pi_mat (K1K2 X q) instead of delta the tensor
-      // we need to loop over the q slices
-#pragma omp parallel for num_threads(n_threads)
-      for (size_t qq = 0; qq < q.n_elem; qq++) {
-        // I. ........................................
-        // create the left hand side Lk1, a 1 X K matrix
-        double qi = q.at(qq);
-        arma::mat Lk1(1, F.n_rows, arma::fill::zeros);
-        for (size_t i = 0; i < F.n_rows; i++) {
-          if (i < k) Lk1.at(0, i) = 1.0 - qi;
-          if (i > k) Lk1.at(0, i) = qi;
+      // First we still compute a N X K matrix like above but replacing q / 1 - q with q^2 / (1 - q)^2
+      // then take colsum to get the K vector as the diagonal
+      //
+      // 0. (prepare)
+      for (size_t i = 0; i < F.n_rows; i++) {
+        // create the LHS Dk1k2, N X C matrix from delta given k1, k2
+        arma::mat Dk1k2(D.n_rows, q.n_elem, arma::fill::zeros);
+        for (size_t n = 0; n < D.n_rows; n++) {
+          Dk1k2.row(n) = delta.slice(n).row(F_pair_coord[std::make_pair(k, i)]);
         }
-        // create the right hand side Lk2, a K X N matrix
-        // from a slice of the tensor delta
-        // where the rows are N's, the columns corresponds to
-        // k1k2, k1k3, k2k3, k1k4, k2k4, k3k4, k1k5 ... along the lower triangle matrix P
-        // use F_pair_coord to get proper index for data from the tensor
-        arma::mat Lk2(F.n_rows, D.n_rows, arma::fill::zeros);
-        for (size_t i = 0; i < F.n_rows; i++) {
-          for (size_t n = 0; n < D.n_rows; n++) {
-            if (k != i)
-              Lk2.at(i, n) = delta.slice(n).at(F_pair_coord[std::make_pair(k, i)], qq);
-          }
+        if (k < i) {
+          // I.
+          L.col(k) += Dk1k2 * q;
+          // II.
+          L2.col(k) += Dk1k2 * (q % q);
         }
-        // Update the k-th column of L
-        L.col(k) += arma::vectorise(Lk1 * Lk2);
-        // II. ........................................
-        for (size_t i = 0; i < F.n_rows; i++) {
-          if (i < k) Lk1.at(0, i) = (1.0 - qi) * (1.0 - qi);
-          if (i > k) Lk1.at(0, i) = qi * qi;
+        if (k > i) {
+          L.col(k) += Dk1k2 * (1 - q);
+          L2.col(k) += Dk1k2 * ((1 - q) % (1 - q));
         }
-        arma::mat Lk3(F.n_rows, 1, arma::fill::zeros);
-        for (size_t i = 0; i < F.n_rows; i++) {
-          if (k != i) Lk3.at(i, 0) = D.n_rows * pi_mat.at(F_pair_coord[std::make_pair(k, i)], qq);
-        }
-        // Update E(W_kk)
-        W.at(k, k) += arma::as_scalar(Lk1 * Lk3);
       }
+      // II.
+      W.diag() = arma::sum(L2);
     }
     // III. Now we compute off-diagonal elements for E(W), the K X K matrix
     // it involves on the LHS a vector of [q1(1-q1), q2(1-q2) ...]
     // and on the RHS for each pair of (k1, k2) the corresponding row from pi_mat
-    arma::vec LHS = q.transform( [](double val) { return (val * (1.0 - val)); } );
+    arma::vec LHS = q % (1 - q);
 #pragma omp parallel for num_threads(n_threads)
     for (size_t k1 = 0; k1 < F.n_rows; k1++) {
       for (size_t k2 = 0; k2 < k1; k2++) {
