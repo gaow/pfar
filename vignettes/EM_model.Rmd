@@ -25,9 +25,21 @@ Then we can write
 
 $$ Pr \left [ D_{n} | \pi, F \right ] = \sum_{k_1 < k_2} \pi_{k_1, k_2} Pr \left [ D_{n} | Z_{n}=(k_1,k_2), F \right ] $$
 
+We define the joint prior over the edges and the fraction of the edge represented as 
+
+$$ \pi_{k_1,k_2, q} = \pi_{k_1, k_2} \pi_{q} \hspace{1 cm} k_1 < k_2 $$
+
 The overall likelihood 
 
 $$ L(\pi, F) = \prod_{n=1}^{N} Pr \left [ D_{n} | \pi, F \right ] $$
+
+or we can write it as 
+
+$$ L(\pi, F) = \prod_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \prod_{j=1}^{G} N \left (D_{nj}; q F_{k_1,g} + (1-q) F_{k_2, g}, s^2_{j} \right) $$
+
+$$ log L (\pi, F) = \sum_{n=1}^{N} log \left (\sum_{k_1 < k_2} \sum_{q} \prod_{j=1}^{G} N \left (D_{nj}; q F_{k_1,g} + (1-q) F_{k_2, g}, s^2_{j} \right) \right ) $$
+
+This is the log likelihood we want to maximize and we need to return this log-likelihood. 
 
 We assume that $q$ can take a finite set of values between $0$ and $1$, say $1/100, 2/100, \cdots, 90/100, 1$.
 
@@ -36,35 +48,32 @@ $$\delta^{(m+1)}_{n, k_1, k_2, c} = Pr \left [ Z_{n} = (k_1, k_2), \lambda_{n} =
 
 $$\delta^{(m+1)}_{n, k_1, k_2, c} \propto Pr \left [ Z_{n} = (k_1, k_2) \right] Pr \left [ \lambda_{n} = q \right] Pr \left [ D_{n} |  \pi^{(m)}, F^{(m)}, Z_{n}= (k_1, k_2), \lambda_{n}=q \right] $$
 
-$$ \delta^{(m+1)}_{n, k_1, k_2, c} \propto \pi^{(m)}_{k_1,k_2} \pi^{(m)}_{q} \prod_{j} N \left (D_{nj} | qF_{k_1,j} + (1-q)F_{k_2,j}, s^2_{j} \right) $$
+$$ \delta^{(m+1)}_{n, k_1, k_2, q} \propto \pi^{(m)}_{k_1,k_2, q} \prod_{j} N \left (D_{nj} | qF_{k_1,j} + (1-q)F_{k_2,j}, s^2_{j} \right) $$
 
 where $s^2_{j}$ is the estimated variance of the gene $j$.
 
+We normalize $\delta$ so that 
+
+$$ \sum_{k_1 < k_2} \sum_{q} \delta^{(m+1)}_{n, k_1, k_2, q} = 1 \hspace{1 cm} \forall n $$
+
 We define 
 
-$$ \pi^{(m+1)}_{k_1, k_2} \pi^{(m+1)}_{q} = \frac{1}{N}\sum_{n=1}^{N} \delta^{(m+1)}_{n, k_1, k_2, q} $$
+$$ \pi^{(m+1)}_{k_1, k_2, q} = \frac{1}{N}\sum_{n=1}^{N} \delta^{(m+1)}_{n, k_1, k_2, q} $$
 
-Taking sum over $q$ on either side we get 
 
-$$ \pi^{(m+1)}_{k_1, k_2} = \frac{1}{N} \sum_{q}\sum_{n=1}^{N} \delta^{(m+1)}_{n, k_1, k_2, q} $$
-
-Again taking sum over $k_1$ and $k_2$,
-
-$$ \pi^{(m+1)}_{q} = \frac{1}{N} \sum_{k_1 < k_2}\sum_{n=1}^{N} \delta^{(m+1)}_{n, k_1, k_2, q} $$
-
-We have therefore updated $\pi^{(m)}_{k_1, k_2}$ to $\pi^{(m+1)}_{k_1, k_2}$ and $\pi^{(m)}_{q}$ to $\pi^{(m+1)}_{q}$.
+We have therefore updated $\pi^{(m)}_{k_1, k_2, q}$ to $\pi^{(m+1)}_{k_1, k_2, q}$.
 
 We define the parameter 
 
-$$ \theta : = \left (\pi_{k_1,k_2}, \pi_{\lambda}, F \right ) $$
+$$ \theta : = \left (\pi_{k_1,k_2, q}, F \right ) $$
 
 We define the complete loglikelihood 
 
-$$ log L \left (\theta; D, Z \right ) = log \pi_{\lambda} + log \pi_{k_1,k_2} + log L (D | Z, q, F) $$
+$$ log L_{c} \left (\theta; D, Z, \lambda \right ) = log \pi_{k_1,k_2, q} + log L (D | Z, \lambda, q, F) $$
 
 We take the expectation of this quantity with respect to $\left [ Z, \lambda | D, \theta^{(m)} \right ]$.
 
-$$ Q (\theta | \theta^{(m)}) = - \sum_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \delta^{(m+1)}_{k_1, k_2, q}  \sum_{j} \frac{(D_{nj} - q F_{k_1,j} - (1-q) F_{k_2,j})^2}{s^2_{j}} $$
+$$ Q (\theta | \theta^{(m)}) = - \sum_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \delta^{(m+1)}_{n, k_1, k_2, q}  \sum_{j} \frac{(D_{nj} - q F_{k_1,j} - (1-q) F_{k_2,j})^2}{s^2_{j}} $$
 
 We try to maximize this quantity with respect to $F$, 
 
@@ -80,6 +89,7 @@ We define
 
 $$ D^{'}_{nj} : = \frac{D_{nj}}{s_{j}} $$
 
+If we consider finding the factors on a gene by gene basis, we do not need to worry about $s_j$.
 
 \begin{align*}
 L_{nk} & = q \;\; or \;\; (1-q) \hspace{1 cm} \lambda_{n}=q \\
