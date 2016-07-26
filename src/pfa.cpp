@@ -71,20 +71,9 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
   model.print(f1, 0);
   while (*niter <= *maxiter) {
     model.get_loglik_given_nkq();
-    model.update_weights();
-    model.update_LF();
     loglik[*niter] = model.get_loglik();
     (*niter)++;
-    if (keeplog) {
-      f1 << "#----------------------------------\n";
-      f1 << "# Iteration " << *niter << "\n";
-      f1 << "#----------------------------------\n";
-      model.print(f1, 1);
-      f2 << "#----------------------------------\n";
-      f2 << "# Iteration " << *niter << "\n";
-      f2 << "#----------------------------------\n";
-      model.print(f2, 2);
-    }
+    // check convergence
     if (*niter > 1) {
       double diff = loglik[(*niter) - 1] - loglik[(*niter) - 2];
       // check monotonicity
@@ -101,6 +90,19 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
       // did not converge
       *status = 1;
       break;
+    }
+    // continue with more iterations
+    model.update_LF();
+    model.update_weights();
+    if (keeplog) {
+      f1 << "#----------------------------------\n";
+      f1 << "# Iteration " << *niter << "\n";
+      f1 << "#----------------------------------\n";
+      model.print(f1, 1);
+      f2 << "#----------------------------------\n";
+      f2 << "# Iteration " << *niter << "\n";
+      f2 << "#----------------------------------\n";
+      model.print(f2, 2);
     }
   }
   if (*status)

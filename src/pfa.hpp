@@ -118,6 +118,7 @@ public:
       loglik_vec.at(n) = std::log(arma::accu(arma::exp(loglik_mat.slice(n))));
     }
     pi_mat = arma::sum(delta, 2) / D.n_rows;
+    pi_mat = pi_mat / arma::accu(pi_mat);
     loglik = arma::accu(loglik_vec);
   }
 
