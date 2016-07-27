@@ -40,10 +40,14 @@ A list with elements below:
 ...
 }
 \examples{
-dat = readRDS('vignettes/example_data.rds')
-dat = pfar::pc_transform(dat$X)
+## The example data set can be installed via
+## devtools::install_github("kkdey/singleCellRNASeqMouseDeng2014")
+library(singleCellRNASeqMouseDeng2014)
+dat = exprs(Deng2014MouseESC)
+dat = pfar::pc_transform(t(limma::voom(dat)$E))
 control = list(logfile = 'example_data.pfa', n_cpu = 8)
-pfar::pfa(dat$data, F = dat$F, P = dat$P, control = control)
+res = pfar::pfa(dat$data, F = dat$F, P = dat$P, control = control)
+print(res)
 }
 \author{
 Gao Wang and Kushal K. Dey
