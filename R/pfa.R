@@ -11,7 +11,7 @@
 #' \item{F}{...}
 #' \item{L}{...}
 #' \item{P}{...}
-#' \item{Omega}{...}
+#' \item{omega}{...}
 #' \item{loglik}{...}
 #' \item{loglik_diff}{...}
 #' \item{niter}{...}
@@ -29,7 +29,7 @@
 pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control = NULL) {
   ## Initialize data
   if (is.null(F) && is.null(K)) {
-    stop("[ERROR] Please either provide K or F!")
+    stop("[ERROR] Please provide either K or F!")
   }
   if (is.null(F)) {
     # Initialize F with K factors all equal to the column mean of input X
@@ -109,7 +109,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
   Lout <- matrix(res$L, nrow(L), ncol(L))
   Pout <- matrix(res$P, nrow(P), ncol(P))
   loglik <- res$loglik[1:res$niter]
-  return(list(F = Fout, L = Lout, P = Pout, Omega = res$omega,
+  return(list(F = Fout, L = Lout, P = Pout, omega = res$omega,
               loglik = loglik, loglik_diff = diff(loglik),
               niter = res$niter, status = res$status))
 }

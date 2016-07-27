@@ -27,7 +27,7 @@ A list with elements below:
 \item{F}{...}
 \item{L}{...}
 \item{P}{...}
-\item{Omega}{...}
+\item{omega}{...}
 \item{loglik}{...}
 \item{loglik_diff}{...}
 \item{niter}{...}
