@@ -1,9 +1,9 @@
 // Gao Wang and Kushal K. Dey (c) 2016
-#include "pfa.hpp"
 #include <iostream>
 #include <fstream>
 #include <cstdio>
 #include <ctime>
+#include "pfa.hpp"
 
 //! EM algorithm for paired factor analysis
 // @param X [N, J] observed data matrix
@@ -106,7 +106,7 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
     }
   }
   if (*status)
-    std::cerr << "[WARNING] EM algorithm failed to converge!" << std::endl;
+    std::cerr << "[WARNING] EM algorithm failed to converge after " << *niter << " iterations!" << std::endl;
   if (keeplog) {
     f1.close();
     f2.close();

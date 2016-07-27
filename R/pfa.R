@@ -1,3 +1,31 @@
+#' @title Paired factor analysis model
+#' @description ...
+#' @param X [N, J] matrix of observed data
+#' @param K [int] number of factors
+#' @param F [K, J] initial factor matrix
+#' @param P [K, K] initial factor pair frequency matrix
+#' @param q [C, 1] initial vector of possible membership loadings, a discrete set
+#' @param omega [C, 1] initial weight of membership loadings, a discrete set corresponding to q
+#' @param control \{tol = 1E-5, maxiter = 10000, logfile = NULL, n_cpu = 1\} list of runtime variables
+#' @return A list with elements below:
+#' \item{F}{...}
+#' \item{L}{...}
+#' \item{P}{...}
+#' \item{Omega}{...}
+#' \item{loglik}{...}
+#' \item{loglik_diff}{...}
+#' \item{niter}{...}
+#' \item{status}{...}
+#' @details ...
+#' @author Gao Wang and Kushal K. Dey
+#' @references ...
+#' @examples
+#' dat = readRDS('vignettes/example_data.rds')
+#' control = list(logfile = 'example_data.pfa', n_cpu = 8)
+#' pfa(dat$X, K = 15, control = control)
+#' @useDynLib pfar
+#' @export
+
 pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control = NULL) {
   ## Initialize data
   if (is.null(F) && is.null(K)) {

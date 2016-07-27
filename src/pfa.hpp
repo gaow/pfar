@@ -1,3 +1,4 @@
+// Gao Wang and Kushal K. Dey (c) 2016
 #ifndef _PFA_HPP
 #define _PFA_HPP
 
@@ -36,8 +37,8 @@ public:
     pi_mat.set_size(int((P.n_rows - 1) * P.n_rows / 2), q.n_elem);
     n_threads = 1;
     n_updates = std::make_pair(0, 0);
-    // set factor pair coordinates in the tensor
-    // to avoid having to compute it at each iteration
+    // set factor pair coordinates to avoid
+    // having to compute it at each iteration
     for (size_t k1 = 0; k1 < F.n_rows; k1++) {
       for (size_t k2 = 0; k2 < k1; k2++) {
         // (b - 1) * b / 2 - ((b - 1) - a)
