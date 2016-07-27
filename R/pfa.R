@@ -25,9 +25,11 @@
 #' library(singleCellRNASeqMouseDeng2014)
 #' meta_data <- pData(Deng2014MouseESC)
 #' dat = exprs(Deng2014MouseESC)
-#' dat = pfar::pc_transform(t(limma::voom(dat)$E))
+#' K = 6
+#' dat = t(limma::voom(dat)$E)
+#' init_val = pfar::init_weight_princurve(dat, pfar::init_factor_block(pfar::dr_pca(dat), K))
 #' control = list(logfile = 'example_data.pfa', n_cpu = 8)
-#' res = pfar::pfa(dat$data, F = dat$F, P = dat$P, control = control)
+#' res = pfar::pfa(dat, F = init_val$factors, P = init_val$weights, control = control)
 #' print(res)
 #' @useDynLib pfar
 #' @export
@@ -51,7 +53,10 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
   }
   if (is.null(q)) {
     # Initialze q to be 0/100, 1/100, 2/100, ..., 1
-    q <- (seq(0:100) - 1) / 100
+    q <- seq(0, 100) / 100
+  }
+  if (is.integer(q)) {
+    q <- seq(0, 100, by = max(as.integer(100 / q), 1)) / 100
   }
   if (is.null(omega)) {
     omega <- rep(1/length(q), length(q))

@@ -45,9 +45,11 @@ A list with elements below:
 library(singleCellRNASeqMouseDeng2014)
 meta_data <- pData(Deng2014MouseESC)
 dat = exprs(Deng2014MouseESC)
-dat = pfar::pc_transform(t(limma::voom(dat)$E))
+K = 6
+dat = t(limma::voom(dat)$E)
+init_val = pfar::init_weight_princurve(dat, pfar::init_factor_block(pfar::dr_pca(dat), K))
 control = list(logfile = 'example_data.pfa', n_cpu = 8)
-res = pfar::pfa(dat$data, F = dat$F, P = dat$P, control = control)
+res = pfar::pfa(dat, F = init_val$factors, P = init_val$weights, control = control)
 print(res)
 }
 \author{
