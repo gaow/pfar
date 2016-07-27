@@ -1,4 +1,4 @@
-.PHONY: clean install demo
+.PHONY: clean install docs
 
 install:
 	#@R CMD check ./ --no-manual -o $(shell mktemp -d tmp.XXXX)
