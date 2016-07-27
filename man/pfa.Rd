@@ -41,8 +41,9 @@ A list with elements below:
 }
 \examples{
 dat = readRDS('vignettes/example_data.rds')
+dat = pfar::pc_transform(dat$X)
 control = list(logfile = 'example_data.pfa', n_cpu = 8)
-pfa(dat$X, K = 15, control = control)
+pfar::pfa(dat$data, F = dat$F, P = dat$P, control = control)
 }
 \author{
 Gao Wang and Kushal K. Dey
