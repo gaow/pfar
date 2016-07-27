@@ -8,7 +8,7 @@
 #' }
 #' @param dat [N, J] data matrix
 #' @param n_pc [int] number of PC's to keep
-#' @param control \{spins = 3\} list of runtime variables
+#' @param control \{spins = 3, auto_factor = TRUE\} list of runtime variables
 #' @return A list with elements below:
 #' \item{data}{...}
 #' \item{F}{...}
@@ -24,14 +24,14 @@
 #' @export
 pc_transform <- function(dat, n_pc = NULL, control = NULL) {
   dat <- pca(dat, n_pc)
-  factors <- block_analysis(dat, control$spins)$groups
-  if (nrow(factors) < 2) {
-    ## FIXME: need to figure out what to do here
-    prin_pj <- NULL
-  } else {
-    prin_pj <- princurve_projection(dat, factors)
+  projection <- NULL
+  if (is.null(control$auto_factor) || control$auto_factor) {
+    factors <- block_analysis(dat, control$spins)$groups
+    if (nrow(factors) >= 2) {
+      projection <- princurve_projection(dat, factors)
+    }
   }
-  return(list(data = dat, F = prin_pj$F, P = prin_pj$P))
+  return(list(data = dat, F = projection$F, P = projection$P))
 }
 
 ## PCA analysis with broken stick model for number of PCs

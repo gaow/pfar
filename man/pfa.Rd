@@ -43,6 +43,7 @@ A list with elements below:
 ## The example data set can be installed via
 ## devtools::install_github("kkdey/singleCellRNASeqMouseDeng2014")
 library(singleCellRNASeqMouseDeng2014)
+meta_data <- pData(Deng2014MouseESC)
 dat = exprs(Deng2014MouseESC)
 dat = pfar::pc_transform(t(limma::voom(dat)$E))
 control = list(logfile = 'example_data.pfa', n_cpu = 8)

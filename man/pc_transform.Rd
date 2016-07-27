@@ -11,7 +11,7 @@ pc_transform(dat, n_pc = NULL, control = NULL)
 
 \item{n_pc}{[int] number of PC's to keep}
 
-\item{control}{\{spins = 3\} list of runtime variables}
+\item{control}{\{spins = 3, auto_factor = TRUE\} list of runtime variables}
 }
 \value{
 A list with elements below:

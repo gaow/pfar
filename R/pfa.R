@@ -23,6 +23,7 @@
 #' ## The example data set can be installed via
 #' ## devtools::install_github("kkdey/singleCellRNASeqMouseDeng2014")
 #' library(singleCellRNASeqMouseDeng2014)
+#' meta_data <- pData(Deng2014MouseESC)
 #' dat = exprs(Deng2014MouseESC)
 #' dat = pfar::pc_transform(t(limma::voom(dat)$E))
 #' control = list(logfile = 'example_data.pfa', n_cpu = 8)
@@ -37,9 +38,9 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
     stop("[ERROR] Please provide either K or F!")
   }
   if (is.null(F)) {
-    # Initialize F with K factors all equal to the column mean of input X
+    # Initialize F with random K factors
     # FIXME: Have to find a smarter initilization of F
-    F <- t(replicate(K, colMeans(X)))
+    F <- X[sample(nrow(X), size = K, replace = FALSE),]
   } else {
     K <- nrow(F)
   }
@@ -57,7 +58,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
   }
   tol <- as.double(control$tol)
   if (length(tol) == 0 || tol <= 0) {
-    tol <- 1E-5
+    tol <- 1E-4
   }
   maxiter <- as.integer(control$maxiter)
   if (length(maxiter) == 0 || maxiter <= 0) {
@@ -114,7 +115,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
   Lout <- matrix(res$L, nrow(L), ncol(L))
   Pout <- matrix(res$P, nrow(P), ncol(P))
   loglik <- res$loglik[1:res$niter]
-  return(list(F = Fout, L = Lout, P = Pout, omega = res$omega,
+  return(list(F_init = F, F = Fout, L = Lout, P = Pout, omega = res$omega,
               loglik = loglik, loglik_diff = diff(loglik),
               niter = res$niter, status = res$status))
 }
