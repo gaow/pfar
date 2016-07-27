@@ -24,11 +24,11 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
   }
   tol <- as.double(control$tol)
   if (length(tol) == 0 || tol <= 0) {
-    tol <- 1E-6
+    tol <- 1E-5
   }
   maxiter <- as.integer(control$maxiter)
   if (length(maxiter) == 0 || maxiter <= 0) {
-    maxiter <- 1000
+    maxiter <- 10000
   }
   n_cpu <- as.integer(control$n_cpu)
   if (length(n_cpu) == 0 || n_cpu <= 0) {
