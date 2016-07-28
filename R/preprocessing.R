@@ -32,9 +32,9 @@ dr_pca <- function(dat, n_comp = NULL) {
         counter <- counter + 1
       }
     }
-    n_pc <- max(counter, 2)
+    n_comp <- max(counter, 2)
   }
-  n_pc <- min(ncol(dat$x), n_comp)
+  n_comp <- min(ncol(dat$x), n_comp)
   return(dat$x[, 1:n_comp])
 }
 
@@ -61,8 +61,8 @@ dr_pca <- function(dat, n_comp = NULL) {
 #' ...
 #' @export
 init_factor_block <- function(dat, n_block) {
-  n_block <- as.integer()
-  if (is.null(n_block) || n_block <= 0) {
+  n_block <- as.integer(n_block)
+  if (length(n_block) == 0 || n_block <= 0) {
     stop("Please specify number of blocks to learn from data!")
   }
   dist_mat <- as.matrix(dist(dat, method = "euclidean"))
@@ -76,7 +76,7 @@ init_factor_block <- function(dat, n_block) {
   weights <- max(signed.weight.vec) + 1000 - signed.weight.vec
   com_spin <- igraph::cluster_spinglass(dat_graph,
                                         weights = weights,
-                                        spins = n_blocks)
+                                        spins = n_block)
   groups <- apply(dat, 2, function(x) tapply(x, com_spin$membership, mean))
   return(list(factors = groups, obj = com_spin))
 }

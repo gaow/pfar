@@ -27,7 +27,7 @@
 #' dat = exprs(Deng2014MouseESC)
 #' K = 6
 #' dat = t(limma::voom(dat)$E)
-#' init_val = pfar::init_weight_princurve(dat, pfar::init_factor_block(pfar::dr_pca(dat), K))
+#' init_val = pfar::init_weight_princurve(dat, pfar::init_factor_block(pfar::dr_pca(dat), K)$factors)
 #' control = list(logfile = 'example_data.pfa', n_cpu = 8)
 #' res = pfar::pfa(dat, F = init_val$factors, P = init_val$weights, control = control)
 #' print(res)
