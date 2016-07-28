@@ -17,9 +17,9 @@ You can follow the `example` section of the documentation to run the program on 
 ## Troubleshoot
 
 ### Linear algebra support
-If you get error message *Cannot find lapack / blas* you need to install `LAPAC` and `BLAS` libraries. On Debian Linux:
+If you get error message *Cannot find lapack / openblas* you need to install `LAPACK` and `OpenBLAS` libraries. On Debian Linux:
 ```
-sudo apt-get install libblas-dev liblapack-dev
+sudo apt-get install libopenblas-dev liblapack-dev
 ```
 ### OpenMP
 `pfar` requires compilers with OpenMP support. On Debian Linux:
