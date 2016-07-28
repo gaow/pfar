@@ -16,9 +16,9 @@ pfa(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL,
 
 \item{P}{[K, K] initial factor pair frequency matrix}
 
-\item{q}{[C, 1] initial vector of possible membership loadings, a discrete set}
+\item{q}{[C, 1] / [int] defines initial vector of possible membership loadings, a discrete set}
 
-\item{omega}{[C, 1] initial weight of membership loadings, a discrete set corresponding to q}
+\item{omega}{[C, 1] / [int] initial weight of membership loadings, a discrete set corresponding to q}
 
 \item{control}{\{tol = 1E-5, maxiter = 10000, logfile = NULL, n_cpu = 1\} list of runtime variables}
 }
@@ -36,9 +36,6 @@ A list with elements below:
 \description{
 ...
 }
-\details{
-...
-}
 \examples{
 ## The example data set can be installed via
 ## devtools::install_github("kkdey/singleCellRNASeqMouseDeng2014")
@@ -47,9 +44,10 @@ meta_data <- pData(Deng2014MouseESC)
 dat = exprs(Deng2014MouseESC)
 K = 6
 dat = t(limma::voom(dat)$E)
-init_val = pfar::init_weight_princurve(dat, pfar::init_factor_block(pfar::dr_pca(dat), K)$factors)
+dr_dat = pfar::dr_pca(dat)
+init_val = pfar::init_weight_princurve(dr_dat, pfar::init_factor_block(dr_dat, K)$factors)
 control = list(logfile = 'example_data.pfa', n_cpu = 8)
-res = pfar::pfa(dat, F = init_val$factors, P = init_val$weights, control = control)
+res = pfar::pfa(dr_dat, F = init_val$factors, P = init_val$weights, control = control)
 print(res)
 }
 \author{

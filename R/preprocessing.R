@@ -104,12 +104,12 @@ init_factor_block <- function(dat, n_block) {
 #' ...
 #' @export
 init_weight_princurve <- function(dat, factors) {
-  dat <- princurve::principal.curve(dat, plot = FALSE)
   ## dat$s: projected_data_on_curve
   ## dat$lambda: lambda values
-  if (nrow(factors) < 2) {
+  if (is.null(dim(factors))) {
     return(NULL)
   }
+  dat <- princurve::principal.curve(dat, plot = FALSE)
   factors_new <- matrix(0, dim(factors)[1], dim(factors)[2])
   projection_idx <- array(0, nrow(factors))
   for (k in 1:nrow(factors)) {
