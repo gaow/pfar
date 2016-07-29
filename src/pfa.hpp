@@ -1,3 +1,4 @@
+// Gao Wang and Kushal K. Dey (c) 2016
 #ifndef _PFA_HPP
 #define _PFA_HPP
 
@@ -36,8 +37,8 @@ public:
     pi_mat.set_size(int((P.n_rows - 1) * P.n_rows / 2), q.n_elem);
     n_threads = 1;
     n_updates = std::make_pair(0, 0);
-    // set factor pair coordinates in the tensor
-    // to avoid having to compute it at each iteration
+    // set factor pair coordinates to avoid
+    // having to compute it at each iteration
     for (size_t k1 = 0; k1 < F.n_rows; k1++) {
       for (size_t k2 = 0; k2 < k1; k2++) {
         // (b - 1) * b / 2 - ((b - 1) - a)
@@ -149,8 +150,7 @@ public:
     // The loading, L is N X K matrix; W = L'L is K X K matrix
     L.fill(0);
     arma::mat L2 = L;
-    // FIXME: bad parallel
-#pragma omp parallel for num_threads(n_threads)
+#pragma omp parallel for num_threads(n_threads) collapse(2)
     for (size_t k = 0; k < F.n_rows; k++) {
       // I. First we compute the k-th column for E(L), the N X K matrix:
       // generate the proper input for N X C %*% C X 1
@@ -167,6 +167,8 @@ public:
         for (size_t n = 0; n < D.n_rows; n++) {
           Dk1k2.row(n) = delta.slice(n).row(F_pair_coord[std::make_pair(k, i)]);
         }
+#pragma omp critical
+        {
         if (k < i) {
           // I.
           L.col(k) += Dk1k2 * q;
@@ -177,10 +179,11 @@ public:
           L.col(k) += Dk1k2 * (1 - q);
           L2.col(k) += Dk1k2 * ((1 - q) % (1 - q));
         }
+        }
       }
-      // II.
-      W.diag() = arma::sum(L2);
     }
+    // II. diagonal elements for E(W)
+    W.diag() = arma::sum(L2);
     // III. Now we compute off-diagonal elements for E(W), the K X K matrix
     // it involves on the LHS a vector of [q1(1-q1), q2(1-q2) ...]
     // and on the RHS for each pair of (k1, k2) the corresponding row from pi_mat

@@ -2,8 +2,14 @@ Package: pfar
 Version: 0.1
 Date: 2016-07-20
 Title: Paired factor analysis model
+Description: Implementation of paired factor analysis model
 Author: Gao Wang and Kushal K. Dey
 Maintainer: Gao Wang <gaow@uchicago.edu> and Kushal K. Dey <kkdey@uchicago.edu>
-Depends: R (>= 3.0.0) 
-Description: Implementation of paired factor analysis model
-License: MIT 
+Depends:
+    R (>= 3.0.0)
+Imports:
+  vegan,
+  igraph,
+  princurve
+License: MIT
+RoxygenNote: 5.0.1

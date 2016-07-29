@@ -1,6 +1,6 @@
 INCLUDE_FLAG = -I include -I .
-LINK_FLAGS = -lblas -llapack -lm -lgomp -lstdc++
-OPT = -O3
+LINK_FLAGS = -lopenblas -llapack -lm -lgomp -lstdc++
+OPT = -O4
 CXX = g++
 CXXFLAGS = $(INCLUDE_FLAG) $(OPT) -std=c++11 -fopenmp
 RLIB_FLAGS = -fPIC -shared
