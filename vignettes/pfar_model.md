@@ -1,11 +1,13 @@
 ---
-title: "Algorithm for dr-tree reconstruction"
+title: "Paired factor analysis for tree reconstruction"
 author: "Kushal K Dey, Gao Wang"
 date: "July 19, 2016"
 output: pdf_document
 ---
 
-Let $D_{nj}$ be the data corresponding to $n$th sample and $j$th gene. We assume for now that the data is Gaussian in its distribution. We assume there are $K$ factors or nodes of the tree. We assume the model 
+Let $D_{nj}$ be the data corresponding to $n$-th sample and $j$-th gene. 
+We assume for now that the data is Gaussian in its distribution. 
+We assume there are $K$ factors or nodes of the tree. We assume the model 
 
 $$ E \left [ D_{nj} | Z_{n} = (k_1, k_2), \lambda_{n}=q, F \right] = q F_{k1,j} + (1-q) F_{k2,j} $$
 
@@ -41,7 +43,8 @@ $$ log L (\pi, F) = \sum_{n=1}^{N} log \left (\sum_{k_1 < k_2} \sum_{q} \left [ 
 
 This is the log likelihood we want to maximize and we need to return this log-likelihood. 
 
-We assume that $q$ can take a finite set of values between $0$ and $1$, say $1/100, 2/100, \cdots, 90/100, 1$.
+We assume that $q$ can take a finite set of values between $0$ and $1$, 
+say $1/100, 2/100, \cdots, 90/100, 1$.
 
 Suppose we have run upto $m$ iterations. For the $(m+1)$th iteration, we have 
 $$\delta^{(m+1)}_{n, k_1, k_2, c} = Pr \left [ Z_{n} = (k_1, k_2), \lambda_{n} = q | \pi^{(m)}, F^{(m)}, D_{n} \right ] $$
@@ -92,8 +95,11 @@ $$ D^{'}_{nj} : = \frac{D_{nj}}{s_{j}} $$
 If we consider finding the factors on a gene by gene basis, we do not need to worry about $s_j$.
 
 \begin{align*}
-L_{nk} & = q \;\; or \;\; (1-q) \hspace{1 cm} \lambda_{n}=q \\
-        & = 0 o.w
+L_{nk} =
+\begin{cases}
+    q~\text{or}~(1-q) & \lambda_{n}=q \\
+    0 & \text{o.w.}
+\end{cases}
 \end{align*}
 
 We have 
@@ -121,17 +127,6 @@ $$ W_{kl} = \sum_{n} L_{kn}L_{nl} $$
 
 $$ E_{ Z, \lambda | D, \theta^{(m)}} \left ( W_{kl} \right ) = \sum_{n}  E_{ Z, \lambda | D, \theta^{(m)}} \left ( L_{nk}L_{nl} \right) $$
 
-We use the definition of $E_{ Z, \lambda | D, \theta^{(m)}} \left [ L^2_{nk} \right ]$ and $E_{ Z, \lambda | D, \theta^{(m)}} \left [ L_{nk}L_{nl} \right ]$ from above to solve this linear solver. 
-
-
-
-
-
-
-
-
-
-
-
-
-
+We use the definition of $E_{ Z, \lambda | D, \theta^{(m)}} \left [ L^2_{nk} \right ]$ 
+and $E_{ Z, \lambda | D, \theta^{(m)}} \left [ L_{nk}L_{nl} \right ]$ 
+from above to solve this linear solver. 
