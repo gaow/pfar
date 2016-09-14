@@ -129,4 +129,4 @@ $$ E_{ Z, \lambda | D, \theta^{(m)}} \left ( W_{kl} \right ) = \sum_{n}  E_{ Z, 
 
 We use the definition of $E_{ Z, \lambda | D, \theta^{(m)}} \left [ L^2_{nk} \right ]$ 
 and $E_{ Z, \lambda | D, \theta^{(m)}} \left [ L_{nk}L_{nl} \right ]$ 
-from above to solve this linear solver. 
+from above to solve this linear system. 

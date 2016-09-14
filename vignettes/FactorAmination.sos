@@ -1,0 +1,57 @@
+parameter: project = 'deng.pfa'
+parameter: data = 'pfar_factor_prep_deng.rds'
+
+[1]
+# Extract factor data from log
+input: project + '.updates.log'
+output: project + '.factors.txt'
+run:
+  cat ${input} | sed -n "/Factor Matrix:/,/Factor frequency Matrix:/p" | sed 's/Factor frequency Matrix://g' | grep -v "Factor Matrix:" > ${output}
+
+[2]
+# Format factor data to R object
+output: project + '.factors.r'
+python:
+  res = []
+  nrows = 0
+  buffer = []
+  with open(${input!r}) as f:
+    for line in f.readlines():
+      if len(line.strip()) == 0: 
+        ncols = len(buffer[0])
+        res.append("matrix(c({}), {}, {}, byrow = T)".format(', '.join([', '.join(x) for x in buffer]), nrows, ncols))
+        nrows = 0
+        buffer = []
+      else:
+        buffer.append(line.strip().split())
+        nrows += 1
+  with open(${output!r}, 'w') as f:
+    f.write('factors = list({})'.format(','.join(res)))
+
+[3]
+# Make plots
+limit = 200
+output: project + '.factors.pdf'
+R:
+source(${input!r})
+ll <- readRDS(${data!r})
+limit = 200
+J = 1:min(limit, length(factors))
+J[length(J)] = length(factors)
+pdf(${output!r})
+for (j in J) {
+    plot(ll$data[,1], ll$data[,2], pch=20)
+    for (i in 1:nrow(factors[[j]])) {
+        points(factors[[j]][i,1], factors[[j]][i,2], pch=20, col = ifelse(j == length(factors), 'red', 'gold'),
+                                                             cex = ifelse(j == length(factors), 4, 2))
+    }
+}
+dev.off()
+
+[4]
+# Make GIF
+check_command('convert')
+input: pattern = '{name}.{ext}'
+output: expand_pattern('{name}.gif')
+run:
+  convert -delay 2 -loop 0 -density 100 ${input} \( +clone -set delay 500 \) +swap +delete ${output}
