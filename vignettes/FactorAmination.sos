@@ -2,13 +2,22 @@ parameter: project = 'deng.pfa'
 parameter: data = 'pfar_factor_prep_deng.rds'
 
 [1]
+# Run PFA
+input: data
+output: project + '.updates.log'
+R:
+  library(pfar)
+  ll = get(load("pfar_factor_prep_deng.rda"))
+  control = list(maxiter = 5E4, logfile = 'deng.pfa', n_cpu = 4)
+  res = pfa(ll$data, F = ll$factors, control = control)
+
+[2]
 # Extract factor data from log
-input: project + '.updates.log'
 output: project + '.factors.txt'
 run:
   cat ${input} | sed -n "/Factor Matrix:/,/Factor frequency Matrix:/p" | sed 's/Factor frequency Matrix://g' | grep -v "Factor Matrix:" > ${output}
 
-[2]
+[3]
 # Format factor data to R object
 output: project + '.factors.r'
 python:
@@ -28,7 +37,7 @@ python:
   with open(${output!r}, 'w') as f:
     f.write('factors = list({})'.format(','.join(res)))
 
-[3]
+[4]
 # Make plots
 limit = 200
 output: project + '.factors.pdf'
@@ -40,18 +49,19 @@ J = 1:min(limit, length(factors))
 J[length(J)] = length(factors)
 pdf(${output!r})
 for (j in J) {
-    plot(ll$data[,1], ll$data[,2], pch=20)
+    plot(ll$data[,1], ll$data[,2], col = ll$color, pch=19)
     for (i in 1:nrow(factors[[j]])) {
-        points(factors[[j]][i,1], factors[[j]][i,2], pch=20, col = ifelse(j == length(factors), 'red', 'gold'),
-                                                             cex = ifelse(j == length(factors), 4, 2))
+        points(factors[[j]][i,1], factors[[j]][i,2], col = ifelse(j == length(factors), 'red', 'red'),
+                                                     pch = ifelse(j == length(factors), 19, 'o'),
+                                                     cex = ifelse(j == length(factors), 4, 2))
     }
 }
 dev.off()
 
-[4]
+[5]
 # Make GIF
 check_command('convert')
 input: pattern = '{name}.{ext}'
 output: expand_pattern('{name}.gif')
 run:
-  convert -delay 2 -loop 0 -density 100 ${input} \( +clone -set delay 500 \) +swap +delete ${output}
+  convert -delay 2 -loop 0 -density 100 ${input} \( +clone -set delay 200 \) +swap +delete ${output}
