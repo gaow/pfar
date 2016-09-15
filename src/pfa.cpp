@@ -70,6 +70,16 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
   model.set_threads(*n_threads);
   model.print(f1, 0);
   while (*niter <= *maxiter) {
+    if (keeplog) {
+      f1 << "#----------------------------------\n";
+      f1 << "# Iteration " << *niter << "\n";
+      f1 << "#----------------------------------\n";
+      model.print(f1, 1);
+      f2 << "#----------------------------------\n";
+      f2 << "# Iteration " << *niter << "\n";
+      f2 << "#----------------------------------\n";
+      model.print(f2, 2);
+    }
     model.get_loglik_given_nkq();
     loglik[*niter] = model.get_loglik();
     (*niter)++;
@@ -94,16 +104,6 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
     // continue with more iterations
     model.update_LF();
     model.update_weights();
-    if (keeplog) {
-      f1 << "#----------------------------------\n";
-      f1 << "# Iteration " << *niter << "\n";
-      f1 << "#----------------------------------\n";
-      model.print(f1, 1);
-      f2 << "#----------------------------------\n";
-      f2 << "# Iteration " << *niter << "\n";
-      f2 << "#----------------------------------\n";
-      model.print(f2, 2);
-    }
   }
   if (*status)
     std::cerr << "[WARNING] EM algorithm failed to converge after " << *niter << " iterations!" << std::endl;

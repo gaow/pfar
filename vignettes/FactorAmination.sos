@@ -1,23 +1,37 @@
 parameter: project = 'deng.pfa'
 parameter: data = 'pfar_factor_prep_deng.rds'
+parameter: dsc_data = 'DSC428.rds'
+parameter: K = 4
+parameter: goodstart = 0
 
-[1]
+[gif_1]
 # Run PFA
 input: data
 output: project + '.updates.log'
 R:
+  set.seed(10086)
   library(pfar)
-  ll = get(load("pfar_factor_prep_deng.rda"))
-  control = list(maxiter = 5E4, logfile = 'deng.pfa', n_cpu = 4)
-  res = pfa(ll$data, F = ll$factors, control = control)
+  ll = readRDS(${input!r})
+  control = list(maxiter = 5E4, logfile = ${project!r}, n_cpu = 4)
+  if ('factors' %in% names(ll)) {
+    res = pfa(ll$data, F = ll$factors, control = control)
+  } else {
+    if (${goodstart} == 0) {
+       res = pfa(ll$data, K = ${K}, control = control)
+    } else {
+      # Calculate factors
+      init_val = pfar::init_weight_princurve(ll$data, pfar::init_factor_block(ll$data, ${K})$factors)
+      res = pfar::pfa(ll$data, F = init_val$factors, P = init_val$weights, control = control)
+    }
+  }
 
-[2]
+[gif_2]
 # Extract factor data from log
 output: project + '.factors.txt'
 run:
   cat ${input} | sed -n "/Factor Matrix:/,/Factor frequency Matrix:/p" | sed 's/Factor frequency Matrix://g' | grep -v "Factor Matrix:" > ${output}
 
-[3]
+[gif_3]
 # Format factor data to R object
 output: project + '.factors.r'
 python:
@@ -37,7 +51,7 @@ python:
   with open(${output!r}, 'w') as f:
     f.write('factors = list({})'.format(','.join(res)))
 
-[4]
+[gif_4]
 # Make plots
 limit = 200
 output: project + '.factors.pdf'
@@ -49,19 +63,48 @@ J = 1:min(limit, length(factors))
 J[length(J)] = length(factors)
 pdf(${output!r})
 for (j in J) {
-    plot(ll$data[,1], ll$data[,2], col = ll$color, pch=19)
+    plot(ll$data[,1], ll$data[,2], col = ll$color, pch=19, xlab = 'PC1', ylab = 'PC2')
     for (i in 1:nrow(factors[[j]])) {
-        points(factors[[j]][i,1], factors[[j]][i,2], col = ifelse(j == length(factors), 'red', 'red'),
+        points(factors[[j]][i,1], factors[[j]][i,2], col = ifelse(j == length(factors), '#cccc00', '#cccc00'),
                                                      pch = ifelse(j == length(factors), 19, 'o'),
                                                      cex = ifelse(j == length(factors), 4, 2))
     }
 }
 dev.off()
 
-[5]
+[gif_5]
 # Make GIF
 check_command('convert')
 input: pattern = '{name}.{ext}'
 output: expand_pattern('{name}.gif')
 run:
-  convert -delay 2 -loop 0 -density 100 ${input} \( +clone -set delay 200 \) +swap +delete ${output}
+  convert -delay 2 -loop 0 -density 100 ${input} \( -clone 0 -set delay 250 \) -swap 0 +delete \( +clone -set delay 250 \) +swap +delete ${output}
+
+[dsc2data_1]
+# Convert data from DSC format to good input
+check_R_library('pfar')
+input: dsc_data
+output: data
+R:
+merge_nodes <- function(X, label) {
+    dat <- NULL
+    sample_labels <- vector()
+    ll <- vector()
+    for (i in label) {
+      if (!(i %in% names(X)))
+        next
+      if (is.null(dat)) {dat <- X[[i]]
+      } else {dat <- rbind(dat, X[[i]])}
+      sample_labels <- append(sample_labels, rep(i, nrow(X[[i]])))
+      ll <- append(ll, i)
+    }
+    return(list(data=dat, color=as.factor(sample_labels), labels = ll))
+}
+COLORS <- c('#377EB8', '#E41A1C', '#4DAF4A', '#984EA3', '#FFD92F', '#FF7F00', '#F781BF', '#8DD3C7', '#B3B3B3', '#000000', '#56B4E9', '#BC80BD', '#FDB462', '#350E20', '#8A9045', '#800000')
+
+dat = readRDS(${input!r})
+label = c('I10', 'I12', 'I11', 'I1', 'I2', 'I13', 'I3', 'I4', 'I14', 'I5', 'I6', 'I15', 'I7', 'I8')
+Y = merge_nodes(dat$X, label)
+Y$data = pfar::dr_pca(Y$data)
+Y$color = COLORS[Y$color]
+saveRDS(Y, ${output!r})
