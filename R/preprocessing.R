@@ -73,7 +73,7 @@ init_factor_block <- function(dat, n_block) {
   for(m in 1:nrow(dat_edgelist)) {
     signed.weight.vec[m] <- dist_mat[dat_edgelist[m,1], dat_edgelist[m,2]]
   }
-  weights <- max(signed.weight.vec) + 1000 - signed.weight.vec
+  weights <- max(signed.weight.vec) + 1 - signed.weight.vec
   com_spin <- igraph::cluster_spinglass(dat_graph,
                                         weights = weights,
                                         spins = n_block)
