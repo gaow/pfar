@@ -2,7 +2,7 @@ parameter: project = 'deng.pfa'
 parameter: data = 'pfar_factor_prep_deng.rds'
 parameter: dsc_data = 'DSC428.rds'
 parameter: K = 4
-parameter: goodstart = 0
+parameter: blockstart = 0
 
 [gif_1]
 # Run PFA
@@ -16,7 +16,7 @@ R:
   if ('factors' %in% names(ll)) {
     res = pfa(ll$data, F = ll$factors, control = control)
   } else {
-    if (${goodstart} == 0) {
+    if (${blockstart} == 0) {
        res = pfa(ll$data, K = ${K}, control = control)
     } else {
       # Calculate factors
