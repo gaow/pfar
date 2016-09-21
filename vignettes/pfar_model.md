@@ -134,8 +134,9 @@ and $E_{ Z, \lambda | D, \theta^{(m)}} \left [ L_{nk}L_{nl} \right ]$
 from above to solve this linear system. 
 
 In the same way as we computed $F$ by solving for the normal equation obtained from taking derivative of the function $Q (\theta | \theta^{(m)})$, we take derivative of the latter with respect to $s^2_{j}$ to obtain EM updates of the genes variance terms. O  taking derivative, we obtain the estimates as 
+${s_{j}^{(m+1)}}^2$ 
 
-$$ \hat{s}^2_{j} = \sum_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \delta^{(m+1)}_{n, k_1, k_2, q} (D_{nj} - q F_{k_1,j} - (1-q) F_{k_2,j})^2 $$
+$$ \widehat{s_{j}^{(m+1)}}^2 = \sum_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \delta^{(m+1)}_{n, k_1, k_2, q} (D_{nj} - q F_{k_1,j} - (1-q) F_{k_2,j})^2 $$
 
 where the $F$ are the estimated values of the factors from the previous step.
 
