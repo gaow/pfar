@@ -19,7 +19,7 @@ Then we can write
 
 $$ Pr \left [ D_{n} | Z_{n}=(k_1,k_2), F, s^2_{j=1,2,\cdots,J} \right ] = \sum_{q} \pi_{q} Pr \left [D_{n} | Z_{n}=(k_1,k_2), \lambda_{n}=q, F, s^2_{j=1,2,\cdots,J} \right ] $$
 
-where $s^2_{j}$ is the variance of the $j$th feature.
+where $s^2_{j}$ is the residual variance of the $j$th feature.
 
 We also assume the prior 
 
