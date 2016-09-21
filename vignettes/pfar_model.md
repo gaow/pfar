@@ -5,7 +5,9 @@ date: "July 19, 2016"
 output: pdf_document
 ---
 
-Let $D_{nj}$ be the data corresponding to $n$-th sample and $j$-th gene. 
+## The model
+
+Let $D_{nj}$ be the data corresponding to $n$-th sample and $j$-th feature. 
 We assume for now that the data is Gaussian in its distribution. 
 We assume there are $K$ factors or nodes of the tree. We assume the model 
 
@@ -45,6 +47,8 @@ $$ log L (\pi, F) = \sum_{n=1}^{N} log \left (\sum_{k_1 < k_2} \sum_{q} \left [ 
 
 This is the log likelihood we want to maximize and we need to return this log-likelihood. 
 
+## EM updates
+
 We assume that $q$ can take a finite set of values between $0$ and $1$, 
 say $1/100, 2/100, \cdots, 90/100, 1$.
 
@@ -55,7 +59,7 @@ $$\delta^{(m+1)}_{n, k_1, k_2, q} \propto Pr \left [ Z_{n} = (k_1, k_2) \right] 
 
 $$ \delta^{(m+1)}_{n, k_1, k_2, q} \propto \pi^{(m)}_{k_1,k_2, q} \prod_{j} N \left (D_{nj} | qF^{(m)}_{k_1,j} + (1-q)F^{(m)}_{k_2,j}, {s_j^{(m)}}^2 \right) $$
 
-where ${s_j^{(m)}}^2$ is the residual variance of gene $j$.
+where ${s_j^{(m)}}^2$ is the residual variance of feature $j$.
 
 We normalize $\delta$ so that 
 
@@ -94,7 +98,7 @@ We define
 
 $$ D^{'}_{nj} : = \frac{D_{nj}}{s_{j}} $$
 
-If we consider finding the factors on a gene by gene basis, we do not need to worry about $s_j$.
+If we consider finding the factors on a feature-by-feature basis, we do not need to worry about $s_j$.
 
 \begin{align*}
 L_{nk} =
@@ -133,7 +137,7 @@ We use the definition of $E_{ Z, \lambda | D, \theta^{(m)}} \left [ L^2_{nk} \ri
 and $E_{ Z, \lambda | D, \theta^{(m)}} \left [ L_{nk}L_{nl} \right ]$ 
 from above to solve this linear system. 
 
-In the same way as we computed $F$ by solving for the normal equation obtained from taking derivative of the function $Q (\theta | \theta^{(m)})$, we take derivative of the latter with respect to $s^2_{j}$ to obtain EM updates of the genes variance terms. O  taking derivative, we obtain the estimates as 
+In the same way as we computed $F$ by solving for the normal equation obtained from taking derivative of the function $Q (\theta | \theta^{(m)})$, we take derivative of the latter with respect to $s^2_{j}$ to obtain EM updates of the residual variance terms. O  taking derivative, we obtain the estimates as 
 
 $$ \hat{s}^2_{j} = \sum_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \delta^{(m+1)}_{n, k_1, k_2, q} (D_{nj} - q F_{k_1,j} - (1-q) F_{k_2,j})^2 $$
 
