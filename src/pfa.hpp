@@ -30,9 +30,8 @@ public:
     P(cP, K, K, false, true), q(cQ, C, false, true),
     omega(omega, C, false, true), L(cLout, N, K, false, true)
   {
+    // initialize residual sd with sample sd
     s = arma::vectorise(arma::stddev(D));
-    // initialize residual variance with sample variance
-    rs = s;
     L.set_size(D.n_rows, F.n_rows);
     W.set_size(F.n_rows, F.n_rows);
     delta.set_size(int((F.n_rows - 1) * F.n_rows / 2), q.n_elem, D.n_rows);
@@ -79,7 +78,6 @@ public:
     // this results in a N by k1k2 by q tensor of loglik
     // and a k1k2 by q by N tensor of delta
     // and a k1k2 by q matrix of pi_mat
-    arma::cube lik_core = delta;
 #pragma omp parallel for num_threads(n_threads)
     for (size_t qq = 0; qq < q.n_elem; qq++) {
       for (size_t k1 = 0; k1 < F.n_rows; k1++) {
@@ -87,28 +85,22 @@ public:
           // given k1, k2 and q, density is a N-vector
           // in the end of the loop, the vector should populate a column of a slice of the tensor
           arma::vec Dn_delta = arma::zeros<arma::vec>(D.n_rows);
-          arma::vec Dn_lik = arma::zeros<arma::vec>(D.n_rows);
           for (size_t j = 0; j < D.n_cols; j++) {
             arma::vec density = D.col(j);
             double m = q.at(qq) * F.at(k2, j) + (1 - q.at(qq)) * F.at(k1, j);
-            Dn_delta += density.transform( [=](double x) { return (normal_pdf_log(x, m, rs.at(j))); } );
-            Dn_lik += density.transform( [=](double x) { return (normal_pdf_log(x, m, s.at(j))); } );
+            Dn_delta += density.transform( [=](double x) { return (normal_pdf_log(x, m, s.at(j))); } );
           }
-          size_t k1k2 = size_t(k1 * (k1 - 1) / 2 + k2);
-          // populate the lik and the delta tensor
+          // populate the delta tensor
           if (n_updates == std::make_pair(0, 0)) {
             // No update on pi_mat is available yet: approximate it under independence assumption
             Dn_delta = arma::exp(Dn_delta) * (P.at(k1, k2) * omega.at(qq));
-            Dn_lik = arma::exp(Dn_lik) * (P.at(k1, k2) * omega.at(qq));
           }
           else {
-            Dn_delta = arma::exp(Dn_delta) * pi_mat.at(k1k2, qq);
-            Dn_lik = arma::exp(Dn_lik) * pi_mat.at(k1k2, qq);
+            Dn_delta = arma::exp(Dn_delta) * pi_mat.at(F_pair_coord[std::make_pair(k1, k2)], qq);
           }
           // FIXME: this is slow, due to the cube/slice structure
           for (size_t n = 0; n < D.n_rows; n++) {
-            delta.slice(n).at(k1k2, qq) = Dn_delta.at(n);
-            lik_core.slice(n).at(k1k2, qq) = Dn_lik.at(n);
+            delta.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], qq) = Dn_delta.at(n);
           }
         }
       }
@@ -120,9 +112,7 @@ public:
     for (size_t n = 0; n < D.n_rows; n++) {
       double sum_delta_n = arma::accu(delta.slice(n));
       delta.slice(n) = delta.slice(n) / sum_delta_n;
-      double sum_lik_n = arma::accu(lik_core.slice(n));
-      lik_core.slice(n) = lik_core.slice(n) / sum_lik_n;
-      loglik_vec.at(n) = std::log(sum_lik_n);
+      loglik_vec.at(n) = std::log(sum_delta_n);
     }
     pi_mat = arma::sum(delta, 2) / D.n_rows;
     loglik = arma::accu(loglik_vec);
@@ -141,8 +131,7 @@ public:
 #pragma omp parallel for num_threads(n_threads)
     for (size_t k1 = 0; k1 < P.n_rows; k1++) {
       for (size_t k2 = 0; k2 < k1; k2++) {
-        size_t k1k2 = size_t(k1 * (k1 - 1) / 2 + k2);
-        P.at(k1, k2) = pik1k2.at(k1k2);
+        P.at(k1, k2) = pik1k2.at(F_pair_coord[std::make_pair(k1, k2)]);
       }
     }
     // sum over (k1, k2)
@@ -152,11 +141,10 @@ public:
     n_updates.first += 1;
   }
 
-  void update_LF() {
-    // F, the K by J matrix, is to be updated here
-    // L, the N by K matrix, is also to be updated
+  void update_LFS() {
+    // Factors F and loadings L are to be updated here
     // Need to compute 2 matrices in order to solve F
-    // The loading, L is N X K matrix; W = L'L is K X K matrix
+    // S is the residual standard error vector to be updated for each feature
     L.fill(0);
     arma::mat L2 = L;
 #pragma omp parallel for num_threads(n_threads) collapse(2)
@@ -207,26 +195,47 @@ public:
     }
     // IV. Finally we compute F
     F = arma::solve(W, L.t() * D);
+    // V. ... and update s
+#pragma omp parallel for num_threads(n_threads)
+    // FIXME: can this be optimized?
+    for (size_t j = 0; j < D.n_cols; j++) {
+      s.at(j) = 0;
+      for (size_t qq = 0; qq < q.n_elem; qq++) {
+        for (size_t k1 = 0; k1 < F.n_rows; k1++) {
+          for (size_t k2 = 0; k2 < k1; k2++) {
+            for (size_t n = 0; n < D.n_rows; n++) {
+              s.at(j) += delta.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], qq) * std::pow(D.at(n, j) - q.at(qq) * F.at(k2, j) - (1 - q.at(qq)) * F.at(k1, j), 2);
+            }
+          }
+        }
+      }
+      s.at(j) = std::sqrt(s.at(j));
+    }
     // keep track of iterations
     n_updates.second += 1;
   }
 
 private:
+  // N by J matrix of data
   arma::mat D;
+  // K by J matrix of factors
   arma::mat F;
+  // K by K matrix of factor pair frequencies
   arma::mat P;
+  // Q by 1 vector of membership grids
   arma::vec q;
+  // Q by 1 vector of membership grid weights
   arma::vec omega;
-  // sample variance of features
+  // J by 1 vector of residual standard error
   arma::vec s;
-  // residual variance of features
-  arma::vec rs;
-  // K1K2 by q by N tensor
+  // K1K2 by Q by N tensor
   arma::cube delta;
-  // K1K2 by q matrix
+  // K1K2 by Q matrix
   arma::mat pi_mat;
   std::map<std::pair<size_t, size_t>, size_t> F_pair_coord;
+  // N by K matrix of loadings
   arma::mat L;
+  // W = L'L is K X K matrix
   arma::mat W;
   // loglik
   double loglik;

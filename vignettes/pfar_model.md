@@ -82,7 +82,7 @@ $$ log L_{c} \left (\theta; D, Z, \lambda \right ) = log \pi_{k_1,k_2, q} + log 
 
 We take the expectation of this quantity with respect to $\left [ Z, \lambda | D, \theta^{(m)} \right ]$.
 
-$$ Q (\theta | \theta^{(m)}) \propto - \sum_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \delta^{(m+1)}_{n, k_1, k_2, q}  \sum_{j} \left [ log s_{j} + \frac{(D_{nj} - q F_{k_1,j} - (1-q) F_{k_2,j})^2}{2s^2_{j}} \right]$$
+$$ Q (\theta | \theta^{(m)}) \propto - \sum_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \delta^{(m+1)}_{n, k_1, k_2, q}  \sum_{j} \left [ log s^{(m+1)}_{j} + \frac{(D_{nj} - q F_{k_1,j} - (1-q) F_{k_2,j})^2}{2{s_j^{(m+1)}}^2} \right]$$
 
 We try to maximize this quantity with respect to $F$, So, we can take derivative with respect to $F$ and try to solve the resulting normal equation.
 
