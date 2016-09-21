@@ -135,7 +135,7 @@ $$ E_{ Z, \lambda | D, \theta^{(m)}} \left ( W_{kl} \right ) = \sum_{n}  E_{ Z, 
 
 We use the definition of $E_{ Z, \lambda | D, \theta^{(m)}} \left [ L^2_{nk} \right ]$ 
 and $E_{ Z, \lambda | D, \theta^{(m)}} \left [ L_{nk}L_{nl} \right ]$ 
-from above to solve this linear system. 
+from above to solve $F$. 
 
 In the same way as we computed $F$ by solving for the normal equation obtained from taking derivative of the function $Q (\theta | \theta^{(m)})$, we take derivative of the latter with respect to $s^2_{j}$ to obtain EM updates of the residual variance terms. Taking the derivative, we obtain the estimate as 
 
