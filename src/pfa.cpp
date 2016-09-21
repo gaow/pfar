@@ -82,6 +82,9 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
     }
     model.get_loglik_given_nkq();
     loglik[*niter] = model.get_loglik();
+    if (keeplog) {
+      f1 << "Loglik:\t" << loglik[*niter] << "\n";
+    }
     (*niter)++;
     // check convergence
     if (*niter > 1) {
