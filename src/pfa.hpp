@@ -55,7 +55,6 @@ public:
     if (info == 0) {
       // D.print(out, "Data Matrix:");
       q.print(out, "Membership grids:");
-      s.print(out, "Estimated standard deviation of data columns (features):");
     }
     if (info == 1) {
       F.print(out, "Factor matrix:");
@@ -65,7 +64,8 @@ public:
     }
     if (info == 2) {
       pi_mat.print(out, "delta averaged over samples (joint weight for factor pairs and membership grid):");
-      W.print(out, "E[L'L] matrix:");
+      // W.print(out, "E[L'L] matrix:");
+      s.print(out, "Residual standard deviation of data columns:");
     }
   }
 
@@ -197,7 +197,7 @@ public:
     F = arma::solve(W, L.t() * D);
     // V. ... and update s
 #pragma omp parallel for num_threads(n_threads)
-    // FIXME: can this be optimized?
+    // FIXME: can this be optimized? perhaps hard unless we re-design data structure
     for (size_t j = 0; j < D.n_cols; j++) {
       s.at(j) = 0;
       for (size_t qq = 0; qq < q.n_elem; qq++) {
@@ -209,7 +209,7 @@ public:
           }
         }
       }
-      s.at(j) = std::sqrt(s.at(j));
+      s.at(j) = std::sqrt(s.at(j) / double(D.n_rows));
     }
     // keep track of iterations
     n_updates.second += 1;
