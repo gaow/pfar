@@ -129,3 +129,50 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
               loglik = loglik, loglik_diff = diff(loglik),
               niter = res$niter, status = res$status))
 }
+
+#' @title Get model likelihood for PFA 
+#' @description This is a diagnostic function that computes likelihood given simulation parameters
+#' @param D [N, J] matrix of simulated data
+#' @param F [K, J] true factor matrix
+#' @param Qvec [C, 1] vector of simulated membership loadings, a discrete set
+#' @param Svec [J, 1] vector of simulated standard deviation for features
+#' @param pi_k [K * (K - 1) / 2, 1] vector of factor pair frequencies
+#' @param pi_q [C, 1] vector of weights for simulated membership loadings
+#' @details
+#' @author Gao Wang and Kushal K. Dey
+#' @references ...
+#' @examples
+#' @export
+
+get_model_lik <- function(D, FCT, Qvec, Svec, pi_k, pi_q, log_scale = TRUE) {
+  K <- nrow(FCT)
+  key <- t(combn(K, 2))
+  key <- cbind(key, seq(1:nrow(key)))
+  pi_mat <- matrix(0, nrow(key), length(Qvec))
+  # pi_k and pi_q are independent in the model
+  for(k in 1:nrow(key)) {
+    for(q in 1:length(Qvec)) {
+      pi_mat[k,q] <- pi_k[k] * pi_q[q]
+    }
+  }
+
+  lik_mat <- array(0, c(nrow(D), nrow(key), length(Qvec)))
+  loglik <- 0
+
+  for (m in 1:K) {
+    for(q in 1:length(Qvec)) {
+      for(k in 1:(K - 1)) {
+        for(l in (k+1):K) {
+          keyval <- key[which(key[,1]== k & key[,2]== l), 3]
+          lik_mat[m, keyval, q] <- exp(log(pi_mat[keyval, q]) + sum(dnorm(D[m,], Qvec[q] * FCT[k,] + (1 - Qvec[q]) * FCT[l,], Svec, log = TRUE)))
+        }
+      }
+    }
+    loglik <- loglik + log(sum(lik_mat[m,,]))
+  }
+  if (log_scale == FALSE) {
+    return(exp(loglik))
+  } else {
+    return(loglik)
+  }
+}
