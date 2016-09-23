@@ -21,6 +21,9 @@ inline double normal_pdf_log(double x, double m, double sd)
   return INV_SQRT_2PI_LOG - std::log(sd) -0.5 * a * a;
 };
 
+template <typename T>
+void print(const T& e) { std::cout << e << std::endl; }
+
 class PFA {
 public:
   PFA(double * cX, double * cF, double * cP, double * cQ, double * omega,
@@ -51,7 +54,7 @@ public:
   }
   ~PFA() {}
 
-  void print(std::ostream& out, int info) {
+  void write(std::ostream& out, int info) {
     if (info == 0) {
       // D.print(out, "Data Matrix:");
       q.print(out, "Membership grids:");

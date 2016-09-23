@@ -70,17 +70,17 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
 	*niter = 0;
 	PFA model(X, F, P, q, omega, L, *N, *J, *K, *C);
 	model.set_threads(*n_threads);
-	model.print(f1, 0);
+	model.write(f1, 0);
 	while (*niter <= *maxiter) {
 		if (keeplog) {
 			f1 << "#----------------------------------\n";
 			f1 << "# Iteration " << *niter << "\n";
 			f1 << "#----------------------------------\n";
-			model.print(f1, 1);
+			model.write(f1, 1);
 			f2 << "#----------------------------------\n";
 			f2 << "# Iteration " << *niter << "\n";
 			f2 << "#----------------------------------\n";
-			model.print(f2, 2);
+			model.write(f2, 2);
 		}
 		model.get_loglik_given_nkq();
 		loglik[*niter] = model.get_loglik();
