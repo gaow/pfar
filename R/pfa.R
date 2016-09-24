@@ -134,9 +134,9 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
 #' @description This is a diagnostic function that computes likelihood given simulation parameters
 #' @param D [N, J] matrix of simulated data
 #' @param F [K, J] true factor matrix
+#' @param N [K, K] lower triangluar matrix of sample size between each factor pair
 #' @param Qvec [C, 1] vector of simulated membership loadings, a discrete set
 #' @param Svec [J, 1] vector of simulated standard deviation for features
-#' @param pi_k [K * (K - 1) / 2, 1] vector of factor pair frequencies
 #' @param pi_q [C, 1] vector of weights for simulated membership loadings
 #' @details
 #' @author Gao Wang and Kushal K. Dey
@@ -144,11 +144,23 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
 #' @examples
 #' @export
 
-get_model_lik <- function(D, FCT, Qvec, Svec, pi_k, pi_q, log_scale = TRUE) {
+get_model_lik <- function(D, FCT, N, Qvec, Svec, pi_q = NULL, log_scale = TRUE) {
   K <- nrow(FCT)
   key <- t(combn(K, 2))
   key <- cbind(key, seq(1:nrow(key)))
+  sumN <- sum(N)
+  N <- t(N)
   pi_mat <- matrix(0, nrow(key), length(Qvec))
+  if (is.null(pi_q)) {
+    pi_q <- rep(1/length(Qvec), length(Qvec))
+  }
+  pi_k <- vector()
+  for (k in 1:(K - 1)) {
+    for (l in (k+1):K) {
+      keyval <- key[which(key[,1]== k & key[,2]== l), 3]
+      pi_k[keyval] <- N[k, l] / sumN
+    }
+  }
   # pi_k and pi_q are independent in the model
   for(k in 1:nrow(key)) {
     for(q in 1:length(Qvec)) {
@@ -156,6 +168,7 @@ get_model_lik <- function(D, FCT, Qvec, Svec, pi_k, pi_q, log_scale = TRUE) {
     }
   }
 
+  print(pi_mat)
   lik_mat <- array(0, c(nrow(D), nrow(key), length(Qvec)))
   loglik <- 0
 
