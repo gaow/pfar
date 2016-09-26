@@ -168,11 +168,10 @@ get_model_lik <- function(D, FCT, N, Qvec, Svec, pi_q = NULL, log_scale = TRUE) 
     }
   }
 
-  print(pi_mat)
   lik_mat <- array(0, c(nrow(D), nrow(key), length(Qvec)))
   loglik <- 0
 
-  for (m in 1:K) {
+  for (m in 1:nrow(D)) {
     for(q in 1:length(Qvec)) {
       for(k in 1:(K - 1)) {
         for(l in (k+1):K) {
