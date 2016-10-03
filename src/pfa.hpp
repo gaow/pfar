@@ -5,6 +5,7 @@
 #include <armadillo>
 #include <map>
 #include <omp.h>
+#include <stdexcept>
 
 static const double INV_SQRT_2PI = 0.3989422804014327;
 static const double INV_SQRT_2PI_LOG = -0.91893853320467267;
@@ -66,7 +67,8 @@ public:
       omega.print(out, "Membership grid weight:");
     }
     if (info == 2) {
-      pi_mat.print(out, "delta averaged over samples (joint weight for factor pairs and membership grid):");
+      if (n_updates.first > 0)
+        pi_mat.print(out, "delta averaged over samples (joint weight for factor pairs and membership grid):");
       // W.print(out, "E[L'L] matrix:");
       s.print(out, "Residual standard deviation of data columns:");
     }
@@ -114,6 +116,8 @@ public:
 #pragma omp parallel for num_threads(n_threads)
     for (size_t n = 0; n < D.n_rows; n++) {
       double sum_delta_n = arma::accu(delta.slice(n));
+      if (sum_delta_n == 0)
+        throw std::runtime_error("Data likelihood too small for factors under consideration!");
       delta.slice(n) = delta.slice(n) / sum_delta_n;
       loglik_vec.at(n) = std::log(sum_delta_n);
     }

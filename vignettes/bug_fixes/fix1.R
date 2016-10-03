@@ -21,8 +21,8 @@ for(q in 1:length(seq_val)){
 Fstart1 <- runif(10, 0, 500) 
 Fstart2 <- runif(10, 0, 500) 
 Fstart <- rbind(Fstart1, Fstart2)
-
-out <- pfa(data, K=2, F=Fstart)
+control <- list(maxiter=2, logfile = 'file.txt')
+out <- pfa(data, K=2, F=Fstart, control = control)
 
 out$F
 
