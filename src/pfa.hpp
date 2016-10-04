@@ -117,11 +117,9 @@ public:
       // scale delta to avoid very small likelihood driving the product to zero
       // and take exp so that it goes to normal scale
       // see github issue 1 for details
-      delta.slice(n) -= delta.slice(n).max();
-      delta.slice(n) = arma::exp(delta.slice(n));
-      double sum_delta_n = arma::accu(delta.slice(n));
-      delta.slice(n) = delta.slice(n) / sum_delta_n;
-      loglik_vec.at(n) = std::log(sum_delta_n);
+      loglik_vec.at(n) = std::log(arma::accu(delta.slice(n)));
+      delta.slice(n) = arma::exp(delta.slice(n) - delta.slice(n).max());
+      delta.slice(n) = delta.slice(n) /arma::accu(delta.slice(n));
     }
     pi_mat = arma::sum(delta, 2) / D.n_rows;
     loglik = arma::accu(loglik_vec);
