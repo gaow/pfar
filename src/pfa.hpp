@@ -96,10 +96,11 @@ public:
           // populate the delta tensor
           if (n_updates == std::make_pair(0, 0)) {
             // No update on pi_mat is available yet: approximate it under independence assumption
-            Dn_delta = arma::exp(Dn_delta) * (P.at(k1, k2) * omega.at(qq));
+            // Dn_delta on the log scale
+            Dn_delta = Dn_delta + std::log(P.at(k1, k2)) + std::log(omega.at(qq));
           }
           else {
-            Dn_delta = arma::exp(Dn_delta) * pi_mat.at(F_pair_coord[std::make_pair(k1, k2)], qq);
+            Dn_delta = Dn_delta + std::log(pi_mat.at(F_pair_coord[std::make_pair(k1, k2)], qq));
           }
           // FIXME: this is slow, due to the cube/slice structure
           for (size_t n = 0; n < D.n_rows; n++) {
@@ -113,6 +114,11 @@ public:
     loglik_vec.set_size(D.n_rows);
 #pragma omp parallel for num_threads(n_threads)
     for (size_t n = 0; n < D.n_rows; n++) {
+      // scale delta to avoid very small likelihood driving the product to zero
+      // and take exp so that it goes to normal scale
+      // see github issue 1 for details
+      delta.slice(n) -= arma::max(delta.slice(n));
+      delta.slice(n) = arma::exp(delta.slice(n));
       double sum_delta_n = arma::accu(delta.slice(n));
       delta.slice(n) = delta.slice(n) / sum_delta_n;
       loglik_vec.at(n) = std::log(sum_delta_n);
