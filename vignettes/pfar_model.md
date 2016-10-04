@@ -11,7 +11,9 @@ Let $D_{nj}$ be the data corresponding to $n$-th sample and $j$-th feature.
 We assume for now that the data is Gaussian in its distribution. 
 We assume there are $K$ factors or nodes of the tree. We assume the model 
 
-$$ E \left [ D_{nj} | Z_{n} = (k_1, k_2), \lambda_{n}=q, F \right] = q F_{k1,j} + (1-q) F_{k2,j} $$
+\begin{eqnarray}
+ E \left [ D_{nj} | Z_{n} = (k_1, k_2), \lambda_{n}=q, F \right] = q F_{k1,j} + (1-q) F_{k2,j}
+\end{eqnarray}
 
 We assume a prior on $\lambda$,
 
@@ -29,7 +31,9 @@ $$ Pr \left [ Z_{n} = (k_1, k_2) \right ] = \pi_{k_1,k_2} \hspace{1 cm} k_1 < k_
 
 Then we can write 
 
-$$ Pr \left [ D_{n} | \pi, F \right ] = \sum_{k_1 < k_2} \pi_{k_1, k_2} Pr \left [ D_{n} | Z_{n}=(k_1,k_2), F, s^2_{j=1,2,\cdots,J} \right ] $$
+\begin{eqnarray}
+ Pr \left [ D_{n} | \pi, F \right ] = \sum_{k_1 < k_2} \pi_{k_1, k_2} Pr \left [ D_{n} | Z_{n}=(k_1,k_2), F, s^2_{j=1,2,\cdots,J} \right ] 
+\end{eqnarray}
 
 We define the joint prior over the edges and the fraction of the edge represented as 
 
@@ -41,11 +45,15 @@ $$ L(\pi, F) = \prod_{n=1}^{N} Pr \left [ D_{n} | \pi, F, s^2_{j=1,2,\cdots,J} \
 
 or we can write it as 
 
-$$ L(\pi, F) = \prod_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \left [ \pi_{k_1,k_2, q} \times \prod_{j=1}^{G} N \left (D_{nj}; q F_{k_1,g} + (1-q) F_{k_2, g}, s^2_{j} \right) \right ]  $$
+$$L(\pi, F) = \prod_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \left [ \pi_{k_1,k_2, q} \times \prod_{j=1}^{G} N \left (D_{nj}; q F_{k_1,g} + (1-q) F_{k_2, g}, s^2_{j} \right) \right ]  $$
 
-$$ log L (\pi, F) = \sum_{n=1}^{N} log \left (\sum_{k_1 < k_2} \sum_{q} \left [ \pi_{k_1,k_2, q} \times \prod_{j=1}^{G} N \left (D_{nj}; q F_{k_1,g} + (1-q) F_{k_2, g}, s^2_{j} \right) \right ] \right ) $$
+And the log likelihood
 
-This is the log likelihood we want to maximize and we need to return this log-likelihood. 
+\begin{eqnarray}
+log L (\pi, F) = \sum_{n=1}^{N} log \left (\sum_{k_1 < k_2} \sum_{q} \left [ \pi_{k_1,k_2, q} \times \prod_{j=1}^{G} N \left (D_{nj}; q F_{k_1,g} + (1-q) F_{k_2, g}, s^2_{j} \right) \right ] \right )
+\end{eqnarray}
+
+This is the quantity we want to maximize. 
 
 ## EM updates
 
@@ -53,11 +61,12 @@ We assume that $q$ can take a finite set of values between $0$ and $1$,
 say $1/100, 2/100, \cdots, 90/100, 1$.
 
 Suppose we have run upto $m$ iterations. For the $(m+1)$th iteration, we have 
-$$\delta^{(m+1)}_{n, k_1, k_2, q} = Pr \left [ Z_{n} = (k_1, k_2), \lambda_{n} = q | \pi^{(m)}, F^{(m)}, s^{(m)}_{j=1,2,\cdots,J}, D_{n} \right ] $$
 
-$$\delta^{(m+1)}_{n, k_1, k_2, q} \propto Pr \left [ Z_{n} = (k_1, k_2) \right] Pr \left [ \lambda_{n} = q \right] Pr \left [ D_{n} |  \pi^{(m)}, F^{(m)}, s^{(m)}_{j=1,2,\cdots,J}, Z_{n}= (k_1, k_2), \lambda_{n}=q \right] $$
-
-$$ \delta^{(m+1)}_{n, k_1, k_2, q} \propto \pi^{(m)}_{k_1,k_2, q} \prod_{j} N \left (D_{nj} | qF^{(m)}_{k_1,j} + (1-q)F^{(m)}_{k_2,j}, {s_j^{(m)}}^2 \right) $$
+\begin{eqnarray}
+\delta^{(m+1)}_{n, k_1, k_2, q} &=& Pr \left [ Z_{n} = (k_1, k_2), \lambda_{n} = q | \pi^{(m)}, F^{(m)}, s^{(m)}_{j=1,2,\cdots,J}, D_{n} \right ] \\
+ &\propto& Pr \left [ Z_{n} = (k_1, k_2) \right] Pr \left [ \lambda_{n} = q \right] Pr \left [ D_{n} | \pi^{(m)}, F^{(m)}, s^{(m)}_{j=1,2,\cdots,J}, Z_{n}= (k_1, k_2), \lambda_{n}=q \right] \\
+ &\propto& \pi^{(m)}_{k_1,k_2, q} \prod_{j} N \left (D_{nj} | qF^{(m)}_{k_1,j} + (1-q)F^{(m)}_{k_2,j}, {s_j^{(m)}}^2 \right)
+\end{eqnarray}
 
 where ${s_j^{(m)}}^2$ is the residual variance of feature $j$.
 
@@ -82,13 +91,17 @@ $$ log L_{c} \left (\theta; D, Z, \lambda \right ) = log \pi_{k_1,k_2, q} + log 
 
 We take the expectation of this quantity with respect to $\left [ Z, \lambda | D, \theta^{(m)} \right ]$.
 
-$$ Q (\theta | \theta^{(m)}) \propto - \sum_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \delta^{(m+1)}_{n, k_1, k_2, q}  \sum_{j} \left [ log s^{(m+1)}_{j} + \frac{(D_{nj} - q F_{k_1,j} - (1-q) F_{k_2,j})^2}{2{s_j^{(m+1)}}^2} \right]$$
+\begin{eqnarray}
+ Q (\theta | \theta^{(m)}) \propto - \sum_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \delta^{(m+1)}_{n, k_1, k_2, q}  \sum_{j} \left [ log s^{(m+1)}_{j} + \frac{(D_{nj} - q F_{k_1,j} - (1-q) F_{k_2,j})^2}{2{s_j^{(m+1)}}^2} \right]
+\end{eqnarray}
 
 We try to maximize this quantity with respect to $F$, So, we can take derivative with respect to $F$ and try to solve the resulting normal equation.
 
 This equation, conditional on $\left [ Z, \lambda | D, \theta^{(m)} \right ]$, can be written as 
 
-$$ D_{N \times J} = L_{N \times K} F_{K \times J} + E_{N \times J} $$
+\begin{eqnarray}
+ D_{N \times J} = L_{N \times K} F_{K \times J} + E_{N \times J}
+\end{eqnarray}
 
 where 
 
@@ -139,7 +152,9 @@ from above to solve $F$.
 
 In the same way as we computed $F$ by solving for the normal equation obtained from taking derivative of the function $Q (\theta | \theta^{(m)})$, we take derivative of the latter with respect to $s^2_{j}$ to obtain EM updates of the residual variance terms. Taking the derivative, we obtain the estimate as 
 
-$$ \widehat{s_{j}^{(m+1)}}^2 = \frac{1}{N}\sum_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \delta^{(m+1)}_{n, k_1, k_2, q} (D_{nj} - q F_{k_1,j} - (1-q) F_{k_2,j})^2 $$
+\begin{eqnarray}
+\widehat{s_{j}^{(m+1)}}^2 = \frac{1}{N}\sum_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \delta^{(m+1)}_{n, k_1, k_2, q} (D_{nj} - q F_{k_1,j} - (1-q) F_{k_2,j})^2
+\end{eqnarray}
 
 where the $F$ are the estimated values of the factors from the previous step.
 
