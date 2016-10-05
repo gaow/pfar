@@ -98,7 +98,7 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
 				break;
 			}
 			// converged
-			if (diff < *tol && !std::isinf(loglik[(*niter) - 1]))
+			if (diff < *tol)
 				break;
 		}
 		if (*niter == *maxiter) {
