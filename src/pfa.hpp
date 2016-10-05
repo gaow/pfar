@@ -120,8 +120,9 @@ public:
       // a numeric trick is used to calculate log(sum(exp(x)))
       double delta_n_max = delta.slice(n).max();
       delta.slice(n) = arma::exp(delta.slice(n) - delta_n_max);
-      loglik_vec.at(n) = std::log(arma::accu(delta.slice(n))) + delta_n_max;
-      delta.slice(n) = delta.slice(n) /arma::accu(delta.slice(n));
+      double sum_delta_n = arma::accu(delta.slice(n));
+      loglik_vec.at(n) = std::log(sum_delta_n) + delta_n_max;
+      delta.slice(n) = delta.slice(n) / sum_delta_n;
     }
     pi_mat = arma::sum(delta, 2) / D.n_rows;
     loglik = arma::accu(loglik_vec);
