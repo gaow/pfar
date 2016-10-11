@@ -4,16 +4,14 @@
 \alias{get_model_lik}
 \title{Get model likelihood for PFA}
 \usage{
-get_model_lik(D, FCT, Qvec, Svec, pi_k, pi_q, log_scale = TRUE)
+get_model_lik(D, FCT, E, Svec, pi_q = NULL, log_scale = TRUE)
 }
 \arguments{
 \item{D}{[N, J] matrix of simulated data}
 
-\item{Qvec}{[C, 1] vector of simulated membership loadings, a discrete set}
+\item{E}{[K * (K - 1) / 2, 3] sample size (column 3) between each factor pair (indexed in column 1 and 2)}
 
 \item{Svec}{[J, 1] vector of simulated standard deviation for features}
-
-\item{pi_k}{[K * (K - 1) / 2, 1] vector of factor pair frequencies}
 
 \item{pi_q}{[C, 1] vector of weights for simulated membership loadings}
 
