@@ -134,8 +134,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
 #' @description This is a diagnostic function that computes likelihood given simulation parameters
 #' @param D [N, J] matrix of simulated data
 #' @param F [K, J] true factor matrix
-#' @param N [K, K] lower triangluar matrix of sample size between each factor pair
-#' @param Qvec [C, 1] vector of simulated membership loadings, a discrete set
+#' @param E [K * (K - 1) / 2, 3] sample size (column 3) between each factor pair (indexed in column 1 and 2)
 #' @param Svec [J, 1] vector of simulated standard deviation for features
 #' @param pi_q [C, 1] vector of weights for simulated membership loadings
 #' @details
@@ -144,38 +143,44 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
 #' @examples
 #' @export
 
-get_model_lik <- function(D, FCT, N, Qvec, Svec, pi_q = NULL, log_scale = TRUE) {
+get_model_lik <- function(D, FCT, E, Svec, pi_q = NULL, log_scale = TRUE) {
   K <- nrow(FCT)
   key <- t(combn(K, 2))
   key <- cbind(key, seq(1:nrow(key)))
-  sumN <- sum(N)
-  N <- t(N)
-  pi_mat <- matrix(0, nrow(key), length(Qvec))
-  if (is.null(pi_q)) {
-    pi_q <- rep(1/length(Qvec), length(Qvec))
-  }
+  sumN <- sum(E[,3])
   pi_k <- vector()
   for (k in 1:(K - 1)) {
     for (l in (k+1):K) {
       keyval <- key[which(key[,1]== k & key[,2]== l), 3]
-      pi_k[keyval] <- N[k, l] / sumN
+      pi_k[keyval] <- E[which(E[,1]== k & E[,2]== l), 3] / sumN
     }
   }
   # pi_k and pi_q are independent in the model
+  ncol_pi_mat <- max(E[,3])
+  pi_mat <- matrix(0, nrow(key), ncol_pi_mat)
   for(k in 1:nrow(key)) {
-    for(q in 1:length(Qvec)) {
-      pi_mat[k,q] <- pi_k[k] * pi_q[q]
+    num_q <- E[k, 3]
+    if (is.null(pi_q)) {
+      pi_qk <- rep(1 / num_q, num_q)
+    } else {
+      stopifnot(length(pi_q != num_q))
+      pi_qk <- pi_q
+    }
+    for(q in 1:num_q) {
+      pi_mat[k,q] <- pi_k[k] * pi_qk[q]
     }
   }
 
-  lik_mat <- array(0, c(nrow(D), nrow(key), length(Qvec)))
+  lik_mat <- array(0, c(nrow(D), nrow(key), ncol_pi_mat))
   loglik <- 0
 
   for (m in 1:nrow(D)) {
-    for(q in 1:length(Qvec)) {
-      for(k in 1:(K - 1)) {
-        for(l in (k+1):K) {
-          keyval <- key[which(key[,1]== k & key[,2]== l), 3]
+    for(k in 1:(K - 1)) {
+      for(l in (k+1):K) {
+        keyval <- key[which(key[,1]== k & key[,2]== l), 3]
+        Nval <- E[which(E[,1]== k & E[,2]== l), 3]
+        Qvec <- seq(0, 1, length.out = Nval)
+        for(q in 1:Nval) {
           lik_mat[m, keyval, q] <- exp(log(pi_mat[keyval, q]) + sum(dnorm(D[m,], Qvec[q] * FCT[k,] + (1 - Qvec[q]) * FCT[l,], Svec, log = TRUE)))
         }
       }
