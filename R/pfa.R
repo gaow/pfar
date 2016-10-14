@@ -156,6 +156,8 @@ get_model_lik <- function(D, FCT, E, Svec, pi_q = NULL, log_scale = TRUE, revers
     for (l in (k+1):K) {
       keyval <- key[which(key[,1] == k & key[,2] == l), 3]
       num_q <- E[which(E[,1] == k & E[,2] == l), 3]
+      if (length(num_q) == 0)
+        next
       pi_k[keyval] <- num_q / sumN
       if (is.null(pi_q)) {
         pi_qk <- rep(1 / num_q, num_q)
@@ -175,9 +177,11 @@ get_model_lik <- function(D, FCT, E, Svec, pi_q = NULL, log_scale = TRUE, revers
     for (k in 1:(K - 1)) {
       for (l in (k+1):K) {
         keyval <- key[which(key[,1] == k & key[,2] == l), 3]
-        Nval <- E[which(E[,1] == k & E[,2] == l), 3]
-        Qvec <- seq(0, 1, length.out = Nval)
-        for (q in 1:Nval) {
+        num_q <- E[which(E[,1] == k & E[,2] == l), 3]
+        if (length(num_q) == 0)
+          next
+        Qvec <- seq(0, 1, length.out = num_q)
+        for (q in 1:num_q) {
           if (reversed) {
             lik_mat[m, keyval, q] <- exp(log(pi_mat[keyval, q]) + sum(dnorm(D[m,], (1 - Qvec[q]) * FCT[k,] + Qvec[q] * FCT[l,], Svec, log = TRUE)))
           } else {
