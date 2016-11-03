@@ -11,7 +11,7 @@
 
 \begin{document}
 
-\subsection{The Model}
+\section{The Model}
 
 Let $D_{nj}$ be the data corresponding to $n$-th sample and $j$-th feature, where $n$ runs from $1$ to $N$ and $j$ runs from $1$ to $G$. We assume as a first pass that the data is Gaussian in its distribution. 
 
@@ -38,11 +38,11 @@ We assume the model
 
 The prior we define over $\Lambda$ is equivalent to writing 
 
-$$ Pr \left [ \Lambda_{n, q} = 1 \right ] = \pi_{q}  $$
+$$ Pr \left [ \Lambda_{n, q} = 1 \right ] = \delta_{q}  $$
 
 Then we can write 
 
-$$ Pr \left [ D_{n} | Z_{n, k_1, k_2}=1, F, s^2_{j=1,2,\cdots,J} \right ] = \sum_{q} \pi_{q} Pr \left [D_{n} | Z_{n, k_1, k_2}=1, \Lambda_{n, q}=1, F, s^2_{j=1,2,\cdots,J} \right ] $$
+$$ Pr \left [ D_{n} | Z_{n, k_1, k_2}=1, F, s^2_{j=1,2,\cdots,J} \right ] = \sum_{q} \delta_{q} Pr \left [D_{n} | Z_{n, k_1, k_2}=1, \Lambda_{n, q}=1, F, s^2_{j=1,2,\cdots,J} \right ] $$
 
 where $s^2_{j}$ is the variance of the $j$th feature.
 
@@ -57,7 +57,7 @@ Then we can write
  
 We define the joint prior over the edges and the fraction of the edge represented as 
 
-$$ \pi_{k_1,k_2, q} = \pi_{k_1, k_2} \pi_{q} \hspace{1 cm} k_1 < k_2 $$
+$$ \pi_{k_1,k_2, q} = \pi_{k_1, k_2} \delta_{q} \hspace{1 cm} k_1 < k_2 $$
 
 The overall likelihood 
 
@@ -75,7 +75,8 @@ And the log likelihood
 
 This is the quantity we want to maximize. 
 
-\subsection{EM updates - E step}
+\section{EM algorithm}
+\subsection{E step}
 
 We assume that $q$ can take a finite set of values between $0$ and $1$, 
 say $1/100, 2/100, \cdots, 90/100, 1$.
@@ -102,7 +103,7 @@ $$ \pi^{(m+1)}_{k_1, k_2, q} = \frac{1}{N}\sum_{n=1}^{N} \delta^{(m+1)}_{n, k_1,
 We have therefore updated $\pi^{(m)}_{k_1, k_2, q}$ to $\pi^{(m+1)}_{k_1, k_2, q}$.
 
 
-\subsection{Variational EM  - Model 1}
+\subsubsection{Variational EM  - Model 1}
 
 In this set up, we assume prior distributions of $\pi$ and $\delta$ as follows
 
@@ -211,7 +212,7 @@ $$ \delta_{n, k1, k2, q} = \rho_{n, k1, k2} \nu_{nq} $$
 
 and we use this $\delta_{n, k1, k2, q}$ as the responsibility for the M-step of the original EM updates. 
 
-\subsection{Variational EM  - Model 2}
+\subsubsection{Variational EM  - Model 2}
 
 In model 2, we do not assume independence of the latent variables $Z$ and $\Lambda$ and instead estimate their joint variational distribution. 
 
@@ -245,7 +246,7 @@ The updates for $\pi$ and $\delta$ are same as before. Here also we have the sam
 
 
 
-\subsection{M step EM}
+\subsection{M step}
 
 
 We define the parameter 
