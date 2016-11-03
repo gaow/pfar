@@ -143,6 +143,12 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
 #' @examples
 #' @export
 
+#function to find the log of the sum of exp(lx).
+lsum=function(lx){
+  m = max(lx)
+  m + log(sum(exp(lx-m)))
+}
+
 get_model_lik <- function(D, FCT, E, Svec, pi_q = NULL, log_scale = TRUE, reversed = FALSE) {
   K <- nrow(FCT)
   key <- t(combn(K, 2))

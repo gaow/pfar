@@ -1,2 +1,3 @@
-pfar_model.pdf: pfar_model.md
-	R --slave -e "rmarkdown::render('pfar_model.md')"
+pfar_model.pdf: pfar_model.tex
+	pdflatex pfar_model.tex
+	pdflatex pfar_model.tex
