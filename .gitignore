@@ -1,1 +1,5 @@
 tmp*
+**/.DS_store
+vignettes/*.aux
+vignettes/*.log
+vignettes/*.synctex.gz
