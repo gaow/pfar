@@ -11,49 +11,46 @@
 
 \begin{document}
 
-\section{The Model}
+\section{Paired factor analysis (PFA) model}
 
-Let $D_{nj}$ be the data corresponding to $n$-th sample and $j$-th feature, where $n$ runs from $1$ to $N$ and $j$ runs from $1$ to $G$. We assume as a first pass that the data is Gaussian in its distribution. 
+Let $D_{nj}$ be the data corresponding to $n$-th sample and $j$-th feature, 
+where $n$ runs from $1$ to $N$ and $j$ runs from $1$ to $J$.  
+Suppose these data come from a graph with $K$ nodes (factors) and $E$ edges. In the
+PFA set up $E=\frac{K(K-1)}{2}$.
 
-Let us consider a graph model with $K$ nodes (factors) and $E$ edges (in our model right now, $E=K(K-1)/2$).
-
-Let us define latent variables $Z$ and $\Lambda$ such that $Z_{n}$ is a $E \times 1$ vector which is one-hot, where $E$ is the total number of edges in the graph. Again $\Lambda_{n}$ is a $Q \times 1$ one-hot vector, where $Q$ is the cardinality of the set of values that $q$ can take. 
-
-$$  Pr (Z |  \pi )  = \prod_{n=1}^{N} \prod_{k_1 < k_2} \pi_{k1,k2}^{z_{n,k1,k2}} $$
-
-We assume that $q$ can take a finite set of values between $0$ and $1$, 
-say $1/100, 2/100, \cdots, 90/100, 1$.
-
-Also
-
-$$  Pr (\Lambda | \delta ) = \prod_{n=1}^{N} \prod_{q=1}^{Q} \delta_{q}^{\lambda_{nq}} $$
-
-here $Q$ is $100$, if there are $100$ values that $q$ can take.
-
-We assume the model 
-
-\begin{eqnarray}
- E \left [ D_{nj} | Z_{n, k_1, k_2} = 1, \lambda_{n,q}=1, F \right] = q F_{k1,j} + (1-q) F_{k2,j}
-\end{eqnarray}
-
-The prior we define over $\Lambda$ is equivalent to writing 
-
-$$ Pr \left [ \Lambda_{n, q} = 1 \right ] = \delta_{q}  $$
-
-Then we can write 
-
-$$ Pr \left [ D_{n} | Z_{n, k_1, k_2}=1, F, s^2_{j=1,2,\cdots,J} \right ] = \sum_{q} \delta_{q} Pr \left [D_{n} | Z_{n, k_1, k_2}=1, \Lambda_{n, q}=1, F, s^2_{j=1,2,\cdots,J} \right ] $$
-
-where $s^2_{j}$ is the variance of the $j$th feature.
-
-We also get from the prior on $Z_{n,k1,k2}$,
+Let us define latent variables $Z$ and $\Lambda$. $Z_{n}$ is a $E
+\times 1$ binary vector. We have a prior on $Z_{n,k1,k2}$,
 
 $$ Pr \left [ Z_{n, k_1, k_2} = 1 \right ] = \pi_{k_1,k_2} \hspace{1 cm} k_1 < k_2$$
 
-Then we can write 
+$$  Pr (Z |  \pi )  = \prod_{n=1}^{N} \prod_{k_1 < k_2}^E \pi_{k1,k2}^{z_{n,k1,k2}} $$
+
+$\Lambda_{n}$ is a $Q \times 1$ binary vector, where $Q$ is the cardinality of the set of values that $q$ can take.
+For computational convenience we assume that $q$ can take a finite set of values between $0$ and $1$, 
+say $1/100, 2/100, \cdots, 99/100, 1$.
+
+We have a prior on  $\Lambda$,
+$$ Pr \left [ \Lambda_{n, q} = 1 \right ] = \delta_{q}  $$
+
+$$  Pr (\Lambda | \delta ) = \prod_{n=1}^{N} \prod_{q=1}^{Q} \delta_{q}^{\lambda_{nq}} $$
+
+For data on the graph given edge $(k_1, k_2)$ and position on edge $q$ we assume the model 
+
+\begin{eqnarray}
+ E \left [ D_{nj} | Z_{n, k_1, k_2} = 1, \Lambda_{n,q}=1, F \right] = q F_{k1,j} + (1-q) F_{k2,j}
+\end{eqnarray}
+
+Where $F$ is a $K\times J$ matrix of factors. 
+Then we can marginalize over $Z$ and $\Lambda$, assuming as a first pass 
+that the data is Gaussian in its distribution,
+
+$$ Pr \left [ D_{n} | Z_{n, k_1, k_2}=1, \delta, F, s^2_{j=1,2,\cdots,J} \right ] = \sum_{q} \delta_{q} Pr \left [D_{n} | Z_{n, k_1, k_2}=1, \Lambda_{n, q}=1, F, s^2_{j=1,2,\cdots,J} \right ] $$
 
 
- $$ Pr \left [ D_{n} | \pi, F \right ] = \sum_{k_1 < k_2} \pi_{k_1, k_2} Pr \left [ D_{n} | Z_{n, k_1, k_2}=1, F, s^2_{j=1,2,\cdots,J} \right ] $$
+ $$ Pr \left [ D_{n} | \pi, \delta, F, s^2_{j=1,2,\cdots,J} \right ] = \sum_{k_1 < k_2}
+ \pi_{k_1, k_2} Pr \left [ D_{n} | Z_{n, k_1, k_2}=1, \delta, F, s^2_{j=1,2,\cdots,J} \right ] $$
+
+where $s^2_{j}$ is the residual variance of the $j$th feature.
  
 We define the joint prior over the edges and the fraction of the edge represented as 
 
@@ -65,12 +62,12 @@ $$ L(\pi, F) = \prod_{n=1}^{N} Pr \left [ D_{n} | \pi, F, s^2_{j=1,2,\cdots,J} \
 
 or we can write it as 
 
-$$L(\pi, F) = \prod_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \left [ \pi_{k_1,k_2, q} \times \prod_{j=1}^{G} N \left (D_{nj}; q F_{k_1,g} + (1-q) F_{k_2, g}, s^2_{j} \right) \right ]  $$
+$$L(\pi, F) = \prod_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \left [ \pi_{k_1,k_2, q} \times \prod_{j=1}^{J} N \left (D_{nj}; q F_{k_1,g} + (1-q) F_{k_2, g}, s^2_{j} \right) \right ]  $$
 
 And the log likelihood
 
 \begin{eqnarray}
-\ln {L (\pi, F)} = \sum_{n=1}^{N} \ln \left (\sum_{k_1 < k_2} \sum_{q} \left [ \pi_{k_1,k_2, q} \times \prod_{j=1}^{G} N \left (D_{nj}; q F_{k_1,g} + (1-q) F_{k_2, g}, s^2_{j} \right) \right ] \right )
+\ln {L (\pi, F)} = \sum_{n=1}^{N} \ln \left (\sum_{k_1 < k_2} \sum_{q} \left [ \pi_{k_1,k_2, q} \times \prod_{j=1}^{J} N \left (D_{nj}; q F_{k_1,g} + (1-q) F_{k_2, g}, s^2_{j} \right) \right ] \right )
 \end{eqnarray}
 
 This is the quantity we want to maximize. 
@@ -115,7 +112,7 @@ $$ Pr (\delta | \beta_0) = C (\beta_0) \prod_{q=1}^{Q} \delta_{q}^{\beta_0 -1 } 
 
 The likelihood above can be written as 
 
-$$ p (D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) = \prod_{n=1}^{N} \prod_{k_1 < k_2} \prod_{q=1}^{Q} [ \prod_{j=1}^{G} N (D_{ng} | qF_{k1,g} + (1-q)F_{k2,g}, s^2_{g})]^{\Lambda_{nq}Z_{n,k1,k2}} $$
+$$ p (D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) = \prod_{n=1}^{N} \prod_{k_1 < k_2} \prod_{q=1}^{Q} [ \prod_{j=1}^{J} N (D_{ng} | qF_{k1,g} + (1-q)F_{k2,g}, s^2_{g})]^{\Lambda_{nq}Z_{n,k1,k2}} $$
 
 The joint probablity distribution distribution is given by 
 
@@ -134,15 +131,15 @@ The variational distribution for $Z$
   + \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right ] \\  \nonumber
   & = & E_{\pi, \delta, \Lambda} \left [ \ln p(Z | \pi) + 
  \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right] + constant \\  \nonumber
-  & = & \sum_{n=1}^{N} \sum_{k_1 < k_2} z_{n, k1, k2} E_{\pi} \left [ \ln (\pi_{k1,k2}) \right ] + \sum_{n=1}^{N} \sum_{k_1 < k_2}  z_{n, k1, k2} \sum_{q} E_{\Lambda}(\lambda_{nq}) \left [ - \sum_{j=1}^{G} \ln (s_j) \right . \\ \nonumber
-  && \left. \qquad \qquad \qquad - \frac{G}{2} \ln (2 \pi) - \sum_{j=1}^{G} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right]   \nonumber
+  & = & \sum_{n=1}^{N} \sum_{k_1 < k_2} z_{n, k1, k2} E_{\pi} \left [ \ln (\pi_{k1,k2}) \right ] + \sum_{n=1}^{N} \sum_{k_1 < k_2}  z_{n, k1, k2} \sum_{q} E_{\Lambda}(\lambda_{nq}) \left [ - \sum_{j=1}^{J} \ln (s_j) \right . \\ \nonumber
+  && \left. \qquad \qquad \qquad - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right]   \nonumber
 \end{eqnarray}
 
 \begin{eqnarray} \nonumber
 \ln q^{\star} (\Lambda)  & = & E_{\pi, \delta, Z} \left [ \ln p(\pi|\alpha_0) + \ln p(\delta | \beta_0) + \ln p(\Lambda | \delta) + \ln p(Z | \pi) + \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right ] \\  \nonumber
    & = & E_{\pi, \delta, Z} \left [ \ln p(\Lambda | \delta) + \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right] + constant  \\  \nonumber
-& = & \sum_{n=1}^{N} \sum_{q=1}^{Q} \lambda_{n,q} E_{\delta} \left [ \ln (\delta_{q}) \right ] + \sum_{n=1}^{N} \sum_{q} \lambda_{nq} \sum_{k_1 < k_2} E_{Z}(z_{n, k1, k2}) \left [ - \sum_{j=1}^{G} \ln (s_j) \right .  \\ \nonumber
-&& \left. \qquad \qquad \qquad   - \frac{G}{2} \ln (2 \pi) - \sum_{j=1}^{G} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right]   \nonumber
+& = & \sum_{n=1}^{N} \sum_{q=1}^{Q} \lambda_{n,q} E_{\delta} \left [ \ln (\delta_{q}) \right ] + \sum_{n=1}^{N} \sum_{q} \lambda_{nq} \sum_{k_1 < k_2} E_{Z}(z_{n, k1, k2}) \left [ - \sum_{j=1}^{J} \ln (s_j) \right .  \\ \nonumber
+&& \left. \qquad \qquad \qquad   - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right]   \nonumber
 \end{eqnarray}
 
 So we get 
@@ -151,11 +148,11 @@ $$ q^{\star}(Z) \propto \prod_{n=1}^{N} \prod_{k_1 < k_2} \rho_{n, k1, k2}^{Z_{n
 
 where  we define
 
-$$ \rho_{n, k1, k2} \propto exp \left (E_{\pi} \left [ \ln (\pi_{k1,k2}) \right ]   + \sum_{q} E_{\Lambda}(\lambda_{nq}) \left [ - \sum_{j=1}^{G} \ln (s_j)  - \frac{G}{2} \ln (2 \pi) - \sum_{j=1}^{G} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \right) $$
+$$ \rho_{n, k1, k2} \propto exp \left (E_{\pi} \left [ \ln (\pi_{k1,k2}) \right ]   + \sum_{q} E_{\Lambda}(\lambda_{nq}) \left [ - \sum_{j=1}^{J} \ln (s_j)  - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \right) $$
 
-$$ \rho_{n, k1, k2} \propto exp \left (E_{\pi} \left [ \ln (\pi_{k1,k2}) \right ]   + \sum_{q} \nu_{nq} \left [ - \sum_{j=1}^{G} \ln (s_j)  - \frac{G}{2} \ln (2 \pi) - \sum_{j=1}^{G} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \right) $$
+$$ \rho_{n, k1, k2} \propto exp \left (E_{\pi} \left [ \ln (\pi_{k1,k2}) \right ]   + \sum_{q} \nu_{nq} \left [ - \sum_{j=1}^{J} \ln (s_j)  - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \right) $$
 
-$$ \rho_{n, k1, k2} \propto exp \left ( \psi_{a_{k1,k2}} - \psi(\sum_{k1 < k2} a_{k1,k2})   +  \left [ - \sum_{j=1}^{G} \ln (s_j)  - \frac{G}{2} \ln (2 \pi) - \sum_{j=1}^{G} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \right) $$
+$$ \rho_{n, k1, k2} \propto exp \left ( \psi_{a_{k1,k2}} - \psi(\sum_{k1 < k2} a_{k1,k2})   +  \left [ - \sum_{j=1}^{J} \ln (s_j)  - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \right) $$
 
 $\rho_{n,k1,k2}$ is normalized to sum to 1 for each $n$ over $k1$ and $k2$.
 
@@ -165,12 +162,12 @@ $$ q^{\star}(\Lambda) \propto \prod_{n=1}^{N} \prod_{q=1}^{Q} \nu_{nq}^{\Lambda_
 
 where 
 
-$$ \nu_{nq}  \propto exp \left (  E_{\delta} \left [ \ln (\delta_{q}) \right ] + \sum_{k_1 < k_2} E_{Z}(z_{n, k1, k2}) \left [ - \sum_{j=1}^{G} \ln (s_j) - \frac{G}{2} \ln (2 \pi) - \sum_{j=1}^{G} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right ] \right ) $$
+$$ \nu_{nq}  \propto exp \left (  E_{\delta} \left [ \ln (\delta_{q}) \right ] + \sum_{k_1 < k_2} E_{Z}(z_{n, k1, k2}) \left [ - \sum_{j=1}^{J} \ln (s_j) - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right ] \right ) $$
 
-$$ \nu_{nq} \propto exp \left (  E_{\delta} \left [ \ln (\delta_{q}) \right ] + \sum_{k_1 < k_2} \rho_{n,k1,k2} \left [ - \sum_{j=1}^{G} \ln (s_j) - \frac{G}{2} \ln (2 \pi) - \sum_{j=1}^{G} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right ] \right ) $$
+$$ \nu_{nq} \propto exp \left (  E_{\delta} \left [ \ln (\delta_{q}) \right ] + \sum_{k_1 < k_2} \rho_{n,k1,k2} \left [ - \sum_{j=1}^{J} \ln (s_j) - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right ] \right ) $$
 
 
-$$ \nu_{nq} \propto exp \left (  \psi(b_{q}) - \psi(\sum_{q=1}^{Q} b_{q}) +  \left [ - \sum_{j=1}^{G} \ln (s_j) - \frac{G}{2} \ln (2 \pi) - \sum_{j=1}^{G} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right ] \right ) $$
+$$ \nu_{nq} \propto exp \left (  \psi(b_{q}) - \psi(\sum_{q=1}^{Q} b_{q}) +  \left [ - \sum_{j=1}^{J} \ln (s_j) - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right ] \right ) $$
 
 $\nu_{nq}$ are normalized to sum to 1.
 
@@ -223,7 +220,7 @@ $$ q(Z, \Lambda, \pi, \delta) = q(Z, \Lambda) q(\pi) q(\delta) $$
 \ln q^{\star} (Z, \Lambda)  & = & E_{\pi, \delta} \left [ \ln p(\pi|\alpha_0) + \ln p(\delta | \beta_0) + \ln p(\Lambda | \delta) + \ln p(Z | \pi) + \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right ] \\ \nonumber
   & = & E_{\pi, \delta, \Lambda} \left [ \ln p(Z | \pi) + \ln p(\Lambda | \delta) + \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right] + constant \\\nonumber
   & = & \sum_{n=1}^{N} \sum_{k_1 < k_2}\sum_{q=1}^{Q} z_{n, k1, k2} \lambda_{nq} E_{\pi} \left [ \ln (\pi_{k1,k2}) \right ] + \sum_{n=1}^{N} \sum_{q=1}^{Q} \sum_{k_1 < k_2} \lambda_{n,q} z_{n, k1, k2} E_{\delta} \left [ \ln (\delta_{q}) \right] \\ \nonumber
-  &&  + \sum_{n=1}^{N} \sum_{k_1 < k_2}  \sum_{q} z_{n, k1, k2} \lambda_{nq} \left [ - \sum_{j=1}^{G} \ln (s_j) - \frac{G}{2} \ln (2 \pi) - \sum_{j=1}^{G} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \\ \nonumber
+  &&  + \sum_{n=1}^{N} \sum_{k_1 < k_2}  \sum_{q} z_{n, k1, k2} \lambda_{nq} \left [ - \sum_{j=1}^{J} \ln (s_j) - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \\ \nonumber
 \end{eqnarray}
 
 From here one can get 
@@ -234,12 +231,12 @@ then
 
 \begin{multline}
  $$ \delta_{n, k1, k2, q} \propto exp \left (  E_{\pi} \left [ \ln (\pi_{k1,k2}) \right] +  E_{\delta} \left [ \ln (\delta_{q}) \right ] \right. \\
- \left . +  \left [ - \sum_{j=1}^{G} \ln (s_j)  - \frac{G}{2} \ln (2 \pi) - \sum_{j=1}^{G} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \right ) 
+ \left . +  \left [ - \sum_{j=1}^{J} \ln (s_j)  - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \right ) 
 \end{multline}
 
 \begin{multline}
   \delta_{n, k1, k2, q} \propto exp \left ( \psi_{a_{k1,k2}} - \psi(\sum_{k1 < k2} a_{k1,k2}) +   \psi(b_{q}) - \psi(\sum_{q=1}^{Q} b_{q}) \right . \\
-  \left . \left [ - \sum_{j=1}^{G} \ln (s_j)  - \frac{G}{2} \ln (2 \pi) -  \sum_{j=1}^{G} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \right ) 
+  \left . \left [ - \sum_{j=1}^{J} \ln (s_j)  - \frac{J}{2} \ln (2 \pi) -  \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \right ) 
 \end{multline}
 
 The updates for $\pi$ and $\delta$ are same as before. Here also we have the same way of initializing $\pi$ and $\delta$ first, then use $a_{k1,k2}=\alpha_0$ and $b_{q}=\beta_0$ to begin with and estimate $\delta_{n,k1,k2,q}$. Then use the $\delta_{n,k1,k2,q}$ to update $a_{k1,k2}$ and $b_{q}$ and proceed in this way. In this case, we do not assume independence of the $\Lambda$ and $Z$ variational distributions, so this model is more generalized.
