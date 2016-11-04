@@ -124,7 +124,7 @@ $$ q(Z, \Lambda, \pi, \delta) = q(Z) q(\Lambda) q(\pi) q(\delta) $$
 
 The variational distribution for $Z$
 
-\begin{flalign}
+\begin{align}
 \ln {q^{\star} (Z)}  = E_{\pi, \delta, \Lambda} \left [ ln p(\pi|\alpha_0)
   + ln p(\delta | \beta_0) + ln p(\Lambda | \delta) + ln p(Z | \pi) 
   + ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right ] & \\ 
