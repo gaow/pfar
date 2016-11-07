@@ -60,12 +60,12 @@ public:
     if (info == 0) {
       // D.print(out, "Data Matrix:");
       q.print(out, "Membership grids:");
+      omega.print(out, "Membership grid weight:");
     }
     if (info == 1) {
       F.print(out, "Factor matrix:");
       P.print(out, "Factor frequency matrix:");
       L.print(out, "Loading matrix:");
-      omega.print(out, "Membership grid weight:");
     }
     if (info == 2) {
       if (n_updates > 0) {
@@ -147,6 +147,21 @@ public:
   double get_loglik() {
     // current log likelihood
     return loglik;
+  }
+
+  void update_weights() {
+    // update factor weights sum over q grids
+    arma::vec pik1k2 = arma::sum(pi_paired, 1);
+    pik1k2 = pik1k2 / arma::sum(pik1k2);
+#pragma omp parallel for num_threads(n_threads)
+    for (size_t k1 = 0; k1 < P.n_rows; k1++) {
+      for (size_t k2 = 0; k2 <= k1; k2++) {
+        if (k2 < k1)
+          P.at(k1, k2) = pik1k2.at(F_pair_coord[std::make_pair(k1, k2)]);
+        else
+          P.at(k1, k1) = pi_single.at(k1);
+      }
+    }
   }
 
   void update_LFS() {
