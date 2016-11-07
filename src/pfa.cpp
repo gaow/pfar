@@ -108,7 +108,6 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
 		}
 		// continue with more iterations
 		model.update_LFS();
-		model.update_weights();
 	}
 	if (*status)
 		std::cerr << "[WARNING] EM algorithm failed to converge after " << *niter << " iterations!" <<

@@ -37,10 +37,12 @@ public:
     s = arma::vectorise(arma::stddev(D));
     L.set_size(D.n_rows, F.n_rows);
     W.set_size(F.n_rows, F.n_rows);
-    delta.set_size(int((F.n_rows - 1) * F.n_rows / 2), q.n_elem, D.n_rows);
-    pi_mat.set_size(int((P.n_rows - 1) * P.n_rows / 2), q.n_elem);
+    delta_paired.set_size(int((F.n_rows - 1) * F.n_rows / 2), q.n_elem, D.n_rows);
+    delta_single.set_size(D.n_rows, F.n_rows);
+    pi_paired.set_size(int((P.n_rows - 1) * P.n_rows / 2), q.n_elem);
+    pi_single.set_size(P.n_rows);
     n_threads = 1;
-    n_updates = std::make_pair(0, 0);
+    n_updates = 0;
     // set factor pair coordinates to avoid
     // having to compute it at each iteration
     for (size_t k1 = 0; k1 < F.n_rows; k1++) {
@@ -66,8 +68,10 @@ public:
       omega.print(out, "Membership grid weight:");
     }
     if (info == 2) {
-      if (n_updates.first > 0)
-        pi_mat.print(out, "delta averaged over samples (joint weight for factor pairs and membership grid):");
+      if (n_updates > 0) {
+        pi_paired.print(out, "Joint weight for factor pairs and membership grid:");
+        pi_single.print(out, "Joint weight for single factors and membership grid):");
+      }
       // W.print(out, "E[L'L] matrix:");
       s.print(out, "Residual standard deviation of data columns:");
     }
@@ -80,37 +84,45 @@ public:
   void get_loglik_given_nkq() {
     // this computes loglik and delta
     // this results in a N by k1k2 by q tensor of loglik
-    // and a k1k2 by q by N tensor of delta
-    // and a k1k2 by q matrix of pi_mat
+    // and a k1k2 by q by N tensor of delta_paired
+    // and a N by K matrix of delta_single
+    // and a k1k2 by q matrix of pi_paired
+    // and a k vector of pi_single
 #pragma omp parallel for num_threads(n_threads)
     for (size_t qq = 0; qq < q.n_elem; qq++) {
       for (size_t k1 = 0; k1 < F.n_rows; k1++) {
-        for (size_t k2 = 0; k2 < k1; k2++) {
+        for (size_t k2 = 0; k2 <= k1; k2++) {
           // given k1, k2 and q, density is a N-vector
           // in the end of the loop, the vector should populate a column of a slice of the tensor
           arma::vec Dn_delta = arma::zeros<arma::vec>(D.n_rows);
           for (size_t j = 0; j < D.n_cols; j++) {
             arma::vec density = D.col(j);
-            double m = q.at(qq) * F.at(k2, j) + (1 - q.at(qq)) * F.at(k1, j);
+            double m = (k1 < k2) ? q.at(qq) * F.at(k2, j) + (1 - q.at(qq)) * F.at(k1, j) : F.at(k1, j);
             Dn_delta += density.transform( [=](double x) { return (normal_pdf_log(x, m, s.at(j))); } );
           }
           // populate the delta tensor
-          if (n_updates == std::make_pair(0, 0)) {
-            // No update on pi_mat is available yet: approximate it under independence assumption
+          if (n_updates == 0) {
+            // No update on pi is available yet: approximate it under independence assumption
             // Dn_delta on the log scale
             Dn_delta = Dn_delta + std::log(P.at(k1, k2)) + std::log(omega.at(qq));
           }
           else {
-            Dn_delta = Dn_delta + std::log(pi_mat.at(F_pair_coord[std::make_pair(k1, k2)], qq));
+            Dn_delta = Dn_delta + ((k1 < k2) ?
+                                   std::log(pi_paired.at(F_pair_coord[std::make_pair(k1, k2)], qq)) :
+                                   std::log(pi_single.at(k1)));
           }
-          // FIXME: this is slow, due to the cube/slice structure
-          for (size_t n = 0; n < D.n_rows; n++) {
-            delta.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], qq) = Dn_delta.at(n);
+          if (k1 < k2) {
+            // FIXME: this is slow, due to the cube/slice structure
+            for (size_t n = 0; n < D.n_rows; n++) {
+              delta_paired.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], qq) = Dn_delta.at(n);
+            }
+          } else {
+            delta_single.col(k1) = Dn_delta;
           }
         }
       }
     }
-    // Compute log likelihood and pi_mat
+    // Compute log likelihood and pi
     arma::vec loglik_vec;
     loglik_vec.set_size(D.n_rows);
 #pragma omp parallel for num_threads(n_threads)
@@ -119,37 +131,22 @@ public:
       // and take exp so that it goes to normal scale
       // see github issue 1 for details
       // a numeric trick is used to calculate log(sum(exp(x)))
-      double delta_n_max = delta.slice(n).max();
-      delta.slice(n) = arma::exp(delta.slice(n) - delta_n_max);
-      double sum_delta_n = arma::accu(delta.slice(n));
+      double delta_n_max = std::max(delta_paired.slice(n).max(), delta_single.row(n).max());
+      delta_paired.slice(n) = arma::exp(delta_paired.slice(n) - delta_n_max);
+      delta_single.row(n) = arma::exp(delta_single.row(n) - delta_n_max);
+      double sum_delta_n = arma::accu(delta_paired.slice(n)) + arma::accu(delta_single.row(n));
       loglik_vec.at(n) = std::log(sum_delta_n) + delta_n_max;
-      delta.slice(n) = delta.slice(n) / sum_delta_n;
+      delta_paired.slice(n) = delta_paired.slice(n) / sum_delta_n;
+      delta_single.row(n) = delta_single.row(n) / sum_delta_n;
     }
-    pi_mat = arma::sum(delta, 2) / D.n_rows;
+    pi_paired = arma::mean(delta_paired, 2);
+    pi_single = arma::mean(delta_single, 1);
     loglik = arma::accu(loglik_vec);
   }
 
   double get_loglik() {
     // current log likelihood
     return loglik;
-  }
-
-  void update_weights() {
-    // update P and omega
-    // sum over q grids
-    arma::vec pik1k2 = arma::sum(pi_mat, 1);
-    pik1k2 = pik1k2 / arma::sum(pik1k2);
-#pragma omp parallel for num_threads(n_threads)
-    for (size_t k1 = 0; k1 < P.n_rows; k1++) {
-      for (size_t k2 = 0; k2 < k1; k2++) {
-        P.at(k1, k2) = pik1k2.at(F_pair_coord[std::make_pair(k1, k2)]);
-      }
-    }
-    // sum over (k1, k2)
-    omega = arma::vectorise(arma::sum(pi_mat));
-    omega = omega / arma::sum(omega);
-    // keep track of iterations
-    n_updates.first += 1;
   }
 
   void update_LFS() {
@@ -173,7 +170,7 @@ public:
         // create the LHS Dk1k2, N X C matrix from delta given k1, k2
         arma::mat Dk1k2(D.n_rows, q.n_elem, arma::fill::zeros);
         for (size_t n = 0; n < D.n_rows; n++) {
-          Dk1k2.row(n) = delta.slice(n).row(F_pair_coord[std::make_pair(k, i)]);
+          Dk1k2.row(n) = delta_paired.slice(n).row(F_pair_coord[std::make_pair(k, i)]);
         }
 #pragma omp critical
         {
@@ -187,6 +184,10 @@ public:
           L.col(k) += Dk1k2 * (1 - q);
           L2.col(k) += Dk1k2 * ((1 - q) % (1 - q));
         }
+        if (k == i) {
+          L.col(k) += delta_single.col(k);
+          L2.col(k) += delta_single.col(k);
+        }
         }
       }
     }
@@ -199,7 +200,7 @@ public:
 #pragma omp parallel for num_threads(n_threads)
     for (size_t k1 = 0; k1 < F.n_rows; k1++) {
       for (size_t k2 = 0; k2 < k1; k2++) {
-        arma::vec RHS = arma::vectorise(D.n_rows * pi_mat.row(F_pair_coord[std::make_pair(k1, k2)]));
+        arma::vec RHS = arma::vectorise(D.n_rows * pi_paired.row(F_pair_coord[std::make_pair(k1, k2)]));
         W.at(k1, k2) = arma::dot(LHS, RHS);
         W.at(k2, k1) = W.at(k1, k2);
       }
@@ -213,9 +214,13 @@ public:
       s.at(j) = 0;
       for (size_t qq = 0; qq < q.n_elem; qq++) {
         for (size_t k1 = 0; k1 < F.n_rows; k1++) {
-          for (size_t k2 = 0; k2 < k1; k2++) {
-            for (size_t n = 0; n < D.n_rows; n++) {
-              s.at(j) += delta.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], qq) * std::pow(D.at(n, j) - q.at(qq) * F.at(k2, j) - (1 - q.at(qq)) * F.at(k1, j), 2);
+          for (size_t k2 = 0; k2 <= k1; k2++) {
+            if (k2 < k1) {
+              for (size_t n = 0; n < D.n_rows; n++) {
+                s.at(j) += delta_paired.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], qq) * std::pow(D.at(n, j) - q.at(qq) * F.at(k2, j) - (1 - q.at(qq)) * F.at(k1, j), 2);
+              }
+            } else {
+              s.at(j) += arma::accu(delta_single.col(k1) % arma::pow(D.col(j) * F.at(k1, j), 2));
             }
           }
         }
@@ -223,7 +228,7 @@ public:
       s.at(j) = std::sqrt(s.at(j) / double(D.n_rows));
     }
     // keep track of iterations
-    n_updates.second += 1;
+    n_updates += 1;
   }
 
 private:
@@ -240,9 +245,13 @@ private:
   // J by 1 vector of residual standard error
   arma::vec s;
   // K1K2 by Q by N tensor
-  arma::cube delta;
+  arma::cube delta_paired;
+  // N by K matrix
+  arma::mat delta_single;
   // K1K2 by Q matrix
-  arma::mat pi_mat;
+  arma::mat pi_paired;
+  // K vector
+  arma::vec pi_single;
   std::map<std::pair<size_t, size_t>, size_t> F_pair_coord;
   // N by K matrix of loadings
   arma::mat L;
@@ -253,6 +262,6 @@ private:
   // number of threads
   int n_threads;
   // updates on the model
-  std::pair<int, int> n_updates;
+  int n_updates;
 };
 #endif
