@@ -15,6 +15,8 @@
 // @param J [int_pt] number of columns of matrix X and F
 // @param K [int_pt] number of rows of matrix F and P
 // @param C [int_pt] number of elements in q
+// @param alpha [double_pt] Dirichlet prior for factor weights
+// @param beta [double_pt] Dirichlet prior for grid weights
 // @param tol [double_pt] tolerance for convergence
 // @param maxiter [int_pt] maximum number of iterations
 // @param niter [int_pt] number of iterations
@@ -28,12 +30,14 @@
 // @param n_threads [int_pt] number of threads for parallel processing
 
 extern "C" int pfa_em(double *, double *, double *, double *, double *,
-	int *, int *, int *, int *, double *, int *, int *,
-	double *, double *, int *,
-	int *, int *, int *, int *, int *);
+                      int *, int *, int *, int *, double *, double *,
+                      double *, int *, int *,
+                      double *, double *, int *,
+                      int *, int *, int *, int *, int *);
 
 int pfa_em(double * X, double * F, double * P, double * q, double * omega,
-           int * N, int * J, int * K, int * C, double * tol, int * maxiter, int * niter,
+           int * N, int * J, int * K, int * C, double * alpha, double * beta,
+           double * tol, int * maxiter, int * niter,
            double * loglik, double * L, int * status,
            int * logfn_1, int * nlf_1, int * logfn_2, int * nlf_2, int * n_threads)
 {
@@ -68,7 +72,7 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
 	// Fit model via EM
 	//
 	*niter = 0;
-	PFA model(X, F, P, q, omega, L, *N, *J, *K, *C);
+	PFA model(X, F, P, q, omega, L, *N, *J, *K, *C, *alpha, *beta);
 	model.set_threads(*n_threads);
 	model.write(f1, 0);
 	while (*niter <= *maxiter) {

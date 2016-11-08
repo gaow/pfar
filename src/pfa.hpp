@@ -27,11 +27,12 @@ void print(const T& e) { std::cout << e << std::endl; }
 class PFA {
 public:
   PFA(double * cX, double * cF, double * cP, double * cQ, double * omega,
-      double * cLout, int N, int J, int K, int C):
+      double * cLout, int N, int J, int K, int C, double alpha, double beta):
     // mat(aux_mem*, n_rows, n_cols, copy_aux_mem = true, strict = true)
     D(cX, N, J, false, true), F(cF, K, J, false, true),
     P(cP, K, K, false, true), q(cQ, C, false, true),
-    omega(omega, C, false, true), L(cLout, N, K, false, true)
+    omega(omega, C, false, true), L(cLout, N, K, false, true),
+    alpha(alpha), beta(beta)
   {
     // initialize residual sd with sample sd
     s = arma::vectorise(arma::stddev(D));
@@ -278,5 +279,8 @@ private:
   int n_threads;
   // updates on the model
   int n_updates;
+  // Dirichlet priors for factors and grids
+  double alpha;
+  double beta;
 };
 #endif
