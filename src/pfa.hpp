@@ -58,15 +58,15 @@ public:
     if (info == 0) {
       // D.print(out, "Data Matrix:");
       q.print(out, "Membership grids:");
+      omega.print(out, "Membership grid weight:");
     }
     if (info == 1) {
       F.print(out, "Factor matrix:");
       P.print(out, "Factor frequency matrix:");
       L.print(out, "Loading matrix:");
-      omega.print(out, "Membership grid weight:");
     }
     if (info == 2) {
-      if (n_updates.first > 0)
+      if (n_updates.first > 1)
         pi_mat.print(out, "delta averaged over samples (joint weight for factor pairs and membership grid):");
       // W.print(out, "E[L'L] matrix:");
       s.print(out, "Residual standard deviation of data columns:");
@@ -135,8 +135,7 @@ public:
   }
 
   void update_weights() {
-    // update P and omega
-    // sum over q grids
+    // update factor weights sum over q grids
     arma::vec pik1k2 = arma::sum(pi_mat, 1);
     pik1k2 = pik1k2 / arma::sum(pik1k2);
 #pragma omp parallel for num_threads(n_threads)
@@ -145,9 +144,6 @@ public:
         P.at(k1, k2) = pik1k2.at(F_pair_coord[std::make_pair(k1, k2)]);
       }
     }
-    // sum over (k1, k2)
-    omega = arma::vectorise(arma::sum(pi_mat));
-    omega = omega / arma::sum(omega);
     // keep track of iterations
     n_updates.first += 1;
   }
