@@ -68,9 +68,9 @@ public:
       L.print(out, "Loading matrix:");
     }
     if (info == 2) {
-      if (n_updates > 0) {
+      if (n_updates > 1) {
         pi_paired.print(out, "Joint weight for factor pairs and membership grid:");
-        pi_single.print(out, "Joint weight for single factors and membership grid):");
+        pi_single.print(out, "Joint weight for single factors and membership grid:");
       }
       // W.print(out, "E[L'L] matrix:");
       s.print(out, "Residual standard deviation of data columns:");
@@ -97,7 +97,7 @@ public:
           arma::vec Dn_delta = arma::zeros<arma::vec>(D.n_rows);
           for (size_t j = 0; j < D.n_cols; j++) {
             arma::vec density = D.col(j);
-            double m = (k1 < k2) ? q.at(qq) * F.at(k2, j) + (1 - q.at(qq)) * F.at(k1, j) : F.at(k1, j);
+            double m = (k2 < k1) ? q.at(qq) * F.at(k2, j) + (1 - q.at(qq)) * F.at(k1, j) : F.at(k1, j);
             Dn_delta += density.transform( [=](double x) { return (normal_pdf_log(x, m, s.at(j))); } );
           }
           // populate the delta tensor
@@ -107,11 +107,11 @@ public:
             Dn_delta = Dn_delta + std::log(P.at(k1, k2)) + std::log(omega.at(qq));
           }
           else {
-            Dn_delta = Dn_delta + ((k1 < k2) ?
+            Dn_delta = Dn_delta + ((k2 < k1) ?
                                    std::log(pi_paired.at(F_pair_coord[std::make_pair(k1, k2)], qq)) :
                                    std::log(pi_single.at(k1)));
           }
-          if (k1 < k2) {
+          if (k2 < k1) {
             // FIXME: this is slow, due to the cube/slice structure
             for (size_t n = 0; n < D.n_rows; n++) {
               delta_paired.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], qq) = Dn_delta.at(n);
@@ -235,7 +235,7 @@ public:
                 s.at(j) += delta_paired.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], qq) * std::pow(D.at(n, j) - q.at(qq) * F.at(k2, j) - (1 - q.at(qq)) * F.at(k1, j), 2);
               }
             } else {
-              s.at(j) += arma::accu(delta_single.col(k1) % arma::pow(D.col(j) * F.at(k1, j), 2));
+              s.at(j) += arma::accu(delta_single.col(k1) % arma::pow(D.col(j) - F.at(k1, j), 2));
             }
           }
         }
