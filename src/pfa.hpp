@@ -282,5 +282,10 @@ private:
   // Dirichlet priors for factors and grids
   double alpha;
   double beta;
+  // K by K matrix of variational parameter for factor pair frequencies
+  arma::mat alpha_mat;
+  // Q by 1 vector of variational parameter for membership grids
+  arma::vec beta_vec;
+
 };
 #endif
