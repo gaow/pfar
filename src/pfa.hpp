@@ -266,7 +266,7 @@ public:
         double tmp = 0;
         if (k2 < k1) {
           if (variational) {
-            arma::vec tmp_vec = arma::sum(arma::sum(delta_paired, 2), 0);
+            arma::vec tmp_vec = arma::vectorise(arma::sum(arma::sum(delta_paired, 2), 0));
             tmp = alpha0 + tmp_vec.at(F_pair_coord[std::make_pair(k1, k2)]);
             P.at(k1, k2) = tmp;
           } else {
@@ -289,7 +289,7 @@ public:
     }
 #pragma omp parallel for num_threads(n_threads)
     for (size_t qq = 0; qq < q.n_elem; qq++) {
-      arma::vec tmp_vec = arma::sum(arma::sum(delta_paired, 2), 1);
+      arma::vec tmp_vec = arma::vectorise(arma::sum(arma::sum(delta_paired, 2), 1));
       double tmp = beta0 + tmp_vec.at(qq);
       digamma_beta.at(qq) = digamma(tmp);
       digamma_sum_beta += tmp;
