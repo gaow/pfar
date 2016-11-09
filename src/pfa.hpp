@@ -21,6 +21,82 @@ inline double normal_pdf_log(double x, double m, double sd)
   return INV_SQRT_2PI_LOG - std::log(sd) -0.5 * a * a;
 };
 
+
+/* The digamma function is the derivative of gammaln.
+   Reference:
+    J Bernardo,
+    Psi ( Digamma ) Function,
+    Algorithm AS 103,
+    Applied Statistics,
+    Volume 25, Number 3, pages 315-317, 1976.
+    From http://www.psc.edu/~burkardt/src/dirichlet/dirichlet.f
+    (with modifications for negative numbers and extra precision)
+*/
+inline double digamma(double x)
+{
+    double neginf = -INFINITY;
+    static const double c = 12,
+            digamma1 = -0.57721566490153286,
+            trigamma1 = 1.6449340668482264365, /* pi^2/6 */
+            s = 1e-6,
+            s3 = 1./12,
+            s4 = 1./120,
+            s5 = 1./252,
+            s6 = 1./240,
+            s7 = 1./132,
+            s8 = 691./32760,
+            s9 = 1./12,
+            s10 = 3617./8160;
+    double result;
+    /* Illegal arguments */
+    if((x == neginf) || std::isnan(x)) {
+        return NAN;
+    }
+    /* Singularities */
+    if((x <= 0) && (floor(x) == x)) {
+        return neginf;
+    }
+    /* Negative values */
+    /* Use the reflection formula (Jeffrey 11.1.6):
+   * digamma(-x) = digamma(x+1) + pi*cot(pi*x)
+   *
+   * This is related to the identity
+   * digamma(-x) = digamma(x+1) - digamma(z) + digamma(1-z)
+   * where z is the fractional part of x
+   * For example:
+   * digamma(-3.1) = 1/3.1 + 1/2.1 + 1/1.1 + 1/0.1 + digamma(1-0.1)
+   *               = digamma(4.1) - digamma(0.1) + digamma(1-0.1)
+   * Then we use
+   * digamma(1-z) - digamma(z) = pi*cot(pi*z)
+   */
+    if(x < 0) {
+        return digamma(1-x) + M_PI/tan(-M_PI*x);
+    }
+    /* Use Taylor series if argument <= S */
+    if(x <= s) return digamma1 - 1/x + trigamma1*x;
+    /* Reduce to digamma(X + N) where (X + N) >= C */
+    result = 0;
+    while(x < c) {
+        result -= 1/x;
+        x++;
+    }
+    /* Use de Moivre's expansion if argument >= C */
+    /* This expansion can be computed in Maple via asympt(Psi(x),x) */
+    if(x >= c) {
+        double r = 1/x, t;
+        result += log(x) - 0.5*r;
+        r *= r;
+#if 0
+        result -= r * (s3 - r * (s4 - r * (s5 - r * (s6 - r * s7))));
+#else
+        /* this version for lame compilers */
+        t = (s5 - r * (s6 - r * s7));
+        result -= r * (s3 - r * (s4 - r * t));
+#endif
+    }
+    return result;
+}
+
 template <typename T>
 void print(const T& e) { std::cout << e << std::endl; }
 
@@ -32,7 +108,7 @@ public:
     D(cX, N, J, false, true), F(cF, K, J, false, true),
     P(cP, K, K, false, true), q(cQ, C, false, true),
     omega(omega, C, false, true), L(cLout, N, K, false, true),
-    alpha(alpha), beta(beta)
+    alpha0(alpha), beta0(beta)
   {
     // initialize residual sd with sample sd
     s = arma::vectorise(arma::stddev(D));
@@ -42,16 +118,25 @@ public:
     delta_single.set_size(D.n_rows, F.n_rows);
     pi_paired.set_size(int((P.n_rows - 1) * P.n_rows / 2), q.n_elem);
     pi_single.set_size(P.n_rows);
+    digamma_alpha.set_size(P.n_rows, P.n_rows);
+    digamma_alpha.zeros();
+    digamma_beta.set_size(q.n_elem);
+    digamma_beta.fill(digmma(beta0));
+    digamma_sum_alpha = digamma(alpha0 * (P.n_rows + 1) * P.n_rows / 2);
+    digamma_sum_beta = digamma(beta0 * q.n_elem);
     n_threads = 1;
     n_updates = 0;
-    // set factor pair coordinates to avoid
-    // having to compute it at each iteration
     for (size_t k1 = 0; k1 < F.n_rows; k1++) {
-      for (size_t k2 = 0; k2 < k1; k2++) {
-        // (b - 1) * b / 2 - ((b - 1) - a)
-        size_t k1k2 = size_t(k1 * (k1 - 1) / 2 + k2);
-        F_pair_coord[std::make_pair(k1, k2)] = k1k2;
-        F_pair_coord[std::make_pair(k2, k1)] = k1k2;
+      for (size_t k2 = 0; k2 <= k1; k2++) {
+        if (k2 < k1) {
+          // set factor pair coordinates to avoid
+          // having to compute it at each iteration
+          // (b - 1) * b / 2 - ((b - 1) - a)
+          size_t k1k2 = size_t(k1 * (k1 - 1) / 2 + k2);
+          F_pair_coord[std::make_pair(k1, k2)] = k1k2;
+          F_pair_coord[std::make_pair(k2, k1)] = k1k2;
+        }
+        digamma_alpha.at(k1, k2) = digamma(alpha0);
       }
     }
   }
@@ -82,7 +167,7 @@ public:
     n_threads = n;
   }
 
-  void get_loglik_given_nkq() {
+  void get_loglik_given_nkq(variational = false) {
     // this computes loglik and delta
     // this results in a N by k1k2 by q tensor of loglik
     // and a k1k2 by q by N tensor of delta_paired
@@ -102,15 +187,21 @@ public:
             Dn_delta += density.transform( [=](double x) { return (normal_pdf_log(x, m, s.at(j))); } );
           }
           // populate the delta tensor
-          if (n_updates == 0) {
-            // No update on pi is available yet: approximate it under independence assumption
-            // Dn_delta on the log scale
-            Dn_delta = Dn_delta + std::log(P.at(k1, k2)) + std::log(omega.at(qq));
-          }
+          if (variational)
+            Dn_delta += ((k2 < k1) ?
+                         digamma_alpha.at(k1, k2) + digamma_beta.at(qq) - digamma_sum_alpha - digamma_sum_beta :
+                         digamma_alpha.at(k1, k2) - digamma_sum_alpha);
           else {
-            Dn_delta = Dn_delta + ((k2 < k1) ?
-                                   std::log(pi_paired.at(F_pair_coord[std::make_pair(k1, k2)], qq)) :
-                                   std::log(pi_single.at(k1)));
+            if (n_updates == 0) {
+              // No update on pi is available yet: approximate it under independence assumption
+              // Dn_delta on the log scale
+              Dn_delta = Dn_delta + std::log(P.at(k1, k2)) + std::log(omega.at(qq));
+            }
+            else {
+              Dn_delta = Dn_delta + ((k2 < k1) ?
+                                     std::log(pi_paired.at(F_pair_coord[std::make_pair(k1, k2)], qq)) :
+                                     std::log(pi_single.at(k1)));
+            }
           }
           if (k2 < k1) {
             // FIXME: this is slow, due to the cube/slice structure
@@ -140,9 +231,12 @@ public:
       delta_paired.slice(n) = delta_paired.slice(n) / sum_delta_n;
       delta_single.row(n) = delta_single.row(n) / sum_delta_n;
     }
-    pi_paired = arma::mean(delta_paired, 2);
-    pi_single = arma::mean(delta_single, 1);
     loglik = arma::accu(loglik_vec);
+    if (variational) {
+    } else {
+      pi_paired = arma::mean(delta_paired, 2);
+      pi_single = arma::mean(delta_single, 1);
+    }
   }
 
   double get_loglik() {
@@ -280,12 +374,13 @@ private:
   // updates on the model
   int n_updates;
   // Dirichlet priors for factors and grids
-  double alpha;
-  double beta;
-  // K by K matrix of variational parameter for factor pair frequencies
-  arma::mat alpha_mat;
-  // Q by 1 vector of variational parameter for membership grids
-  arma::vec beta_vec;
-
+  double alpha0;
+  double beta0;
+  // K by K matrix of digamma of variational parameter for factor pair frequencies
+  arma::mat digamma_alpha;
+  // Q by 1 vector of digamma of variational parameter for membership grids
+  arma::vec digamma_beta;
+  double digamma_sum_alpha;
+  double digamma_sum_beta;
 };
 #endif
