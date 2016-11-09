@@ -155,8 +155,11 @@ public:
     }
     if (info == 2) {
       if (n_updates > 1) {
-        pi_paired.print(out, "Joint weight for factor pairs and membership grid:");
-        pi_single.print(out, "Joint weight for single factors and membership grid:");
+        if (variational) {
+        } else {
+          pi_paired.print(out, "Joint weight for factor pairs and membership grid:");
+          pi_single.print(out, "Joint weight for single factors and membership grid:");
+        }
       }
       // W.print(out, "E[L'L] matrix:");
       s.print(out, "Residual standard deviation of data columns:");
@@ -232,11 +235,8 @@ public:
       delta_single.row(n) = delta_single.row(n) / sum_delta_n;
     }
     loglik = arma::accu(loglik_vec);
-    if (variational) {
-    } else {
-      pi_paired = arma::mean(delta_paired, 2);
-      pi_single = arma::mean(delta_single, 1);
-    }
+    pi_paired = arma::mean(delta_paired, 2);
+    pi_single = arma::mean(delta_single, 1);
   }
 
   double get_loglik() {
