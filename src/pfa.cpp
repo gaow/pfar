@@ -15,13 +15,14 @@
 // @param J [int_pt] number of columns of matrix X and F
 // @param K [int_pt] number of rows of matrix F and P
 // @param C [int_pt] number of elements in q
-// @param alpha [double_pt] Dirichlet prior for factor weights
-// @param beta [double_pt] Dirichlet prior for grid weights
+// @param alpha0 [double_pt] Dirichlet prior for factor weights
+// @param beta0 [double_pt] Dirichlet prior for grid weights
 // @param tol [double_pt] tolerance for convergence
 // @param maxiter [int_pt] maximum number of iterations
 // @param niter [int_pt] number of iterations
 // @param loglik [maxiter, 1] log likelihood, track of convergence (return)
 // @param L [N, K] Loading matrix (return)
+// @param alpha [K, K] Dirichlet posterior parameter matrix for factor pair weights (return)
 // @param status [int_pt] return status, 0 for good, 1 for error (return)
 // @param logfn_1 [int_pt] log file 1 name as integer converted from character array
 // @param nlf_1 [int_pt] length of above
@@ -32,13 +33,13 @@
 extern "C" int pfa_em(double *, double *, double *, double *, double *,
                       int *, int *, int *, int *, double *, double *,
                       double *, int *, int *,
-                      double *, double *, int *,
+                      double *, double *, double *, int *,
                       int *, int *, int *, int *, int *);
 
 int pfa_em(double * X, double * F, double * P, double * q, double * omega,
-           int * N, int * J, int * K, int * C, double * alpha, double * beta,
+           int * N, int * J, int * K, int * C, double * alpha0, double * beta0,
            double * tol, int * maxiter, int * niter,
-           double * loglik, double * L, int * status,
+           double * loglik, double * L, double * alpha, int * status,
            int * logfn_1, int * nlf_1, int * logfn_2, int * nlf_2, int * n_threads)
 {
 	//
@@ -72,8 +73,9 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
 	// Fit model via EM
 	//
 	*niter = 0;
-	PFA model(X, F, P, q, omega, L, *N, *J, *K, *C, *alpha, *beta);
+	PFA model(X, F, P, q, omega, L, alpha, *N, *J, *K, *C, *alpha0, *beta0);
 	model.set_threads(*n_threads);
+  model.set_variational();
 	model.write(f1, 0);
 	while (*niter <= *maxiter) {
 		if (keeplog) {

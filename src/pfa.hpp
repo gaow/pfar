@@ -103,12 +103,13 @@ void print(const T& e) { std::cout << e << std::endl; }
 class PFA {
 public:
   PFA(double * cX, double * cF, double * cP, double * cQ, double * omega,
-      double * cLout, int N, int J, int K, int C, double alpha, double beta):
+      double * cLout, double * calphaout, int N, int J, int K, int C,
+      double alpha0, double beta0):
     // mat(aux_mem*, n_rows, n_cols, copy_aux_mem = true, strict = true)
     D(cX, N, J, false, true), F(cF, K, J, false, true),
     P(cP, K, K, false, true), q(cQ, C, false, true),
     omega(omega, C, false, true), L(cLout, N, K, false, true),
-    alpha0(alpha), beta0(beta)
+    alpha(calphaout, K, K, false, true), alpha0(alpha0), beta0(beta0)
   {
     // initialize residual sd with sample sd
     s = arma::vectorise(arma::stddev(D));
@@ -119,13 +120,16 @@ public:
     pi_paired.set_size(int((P.n_rows - 1) * P.n_rows / 2), q.n_elem);
     pi_single.set_size(P.n_rows);
     digamma_alpha.set_size(P.n_rows, P.n_rows);
+    alpha.set_size(P.n_rows, P.n_rows);
     digamma_alpha.zeros();
+    alpha.zeros();
     digamma_beta.set_size(q.n_elem);
-    digamma_beta.fill(digmma(beta0));
+    digamma_beta.fill(digamma(beta0));
     digamma_sum_alpha = digamma(alpha0 * (P.n_rows + 1) * P.n_rows / 2);
     digamma_sum_beta = digamma(beta0 * q.n_elem);
     n_threads = 1;
     n_updates = 0;
+    variational = false;
     for (size_t k1 = 0; k1 < F.n_rows; k1++) {
       for (size_t k2 = 0; k2 <= k1; k2++) {
         if (k2 < k1) {
@@ -166,11 +170,15 @@ public:
     }
   }
 
+  void set_variational() {
+    variational = true;
+  }
+
   void set_threads(int n) {
     n_threads = n;
   }
 
-  void get_loglik_given_nkq(variational = false) {
+  void get_loglik_given_nkq() {
     // this computes loglik and delta
     // this results in a N by k1k2 by q tensor of loglik
     // and a k1k2 by q by N tensor of delta_paired
@@ -248,14 +256,50 @@ public:
     // update factor weights sum over q grids
     arma::vec pik1k2 = arma::sum(pi_paired, 1);
     pik1k2 = pik1k2 / arma::sum(pik1k2);
+    if (variational) {
+      digamma_sum_alpha = 0;
+      digamma_sum_beta = 0;
+    }
 #pragma omp parallel for num_threads(n_threads)
     for (size_t k1 = 0; k1 < P.n_rows; k1++) {
       for (size_t k2 = 0; k2 <= k1; k2++) {
-        if (k2 < k1)
-          P.at(k1, k2) = pik1k2.at(F_pair_coord[std::make_pair(k1, k2)]);
-        else
-          P.at(k1, k1) = pi_single.at(k1);
+        double tmp = 0;
+        if (k2 < k1) {
+          if (variational) {
+            arma::vec tmp_vec = arma::sum(arma::sum(delta_paired, 2), 0);
+            tmp = alpha0 + tmp_vec.at(F_pair_coord[std::make_pair(k1, k2)]);
+            P.at(k1, k2) = tmp;
+          } else {
+            P.at(k1, k2) = pik1k2.at(F_pair_coord[std::make_pair(k1, k2)]);
+          }
+        } else {
+          if (variational) {
+            arma::vec tmp_vec = arma::sum(delta_single, 1);
+            tmp = alpha0 + tmp_vec.at(F_pair_coord[std::make_pair(k1, k2)]);
+            P.at(k1, k2) = tmp;
+          } else {
+            P.at(k1, k1) = pi_single.at(k1);
+          }
+        }
+        if (variational) {
+          digamma_alpha.at(k1, k2) = digamma(tmp);
+          digamma_sum_alpha += tmp;
+        }
       }
+    }
+#pragma omp parallel for num_threads(n_threads)
+    for (size_t qq = 0; qq < q.n_elem; qq++) {
+      arma::vec tmp_vec = arma::sum(arma::sum(delta_paired, 2), 1);
+      double tmp = beta0 + tmp_vec.at(qq);
+      digamma_beta.at(qq) = digamma(tmp);
+      digamma_sum_beta += tmp;
+    }
+
+    if (variational) {
+      digamma_sum_alpha = digamma(digamma_sum_alpha);
+      digamma_sum_beta = digamma(digamma_sum_beta);
+      alpha = P;
+      P = P / arma::accu(P);
     }
   }
 
@@ -310,6 +354,7 @@ public:
 #pragma omp parallel for num_threads(n_threads)
     for (size_t k1 = 0; k1 < F.n_rows; k1++) {
       for (size_t k2 = 0; k2 < k1; k2++) {
+        // FIXME: check the math involving pi_paired
         arma::vec RHS = arma::vectorise(D.n_rows * pi_paired.row(F_pair_coord[std::make_pair(k1, k2)]));
         W.at(k1, k2) = arma::dot(LHS, RHS);
         W.at(k2, k1) = W.at(k1, k2);
@@ -378,9 +423,12 @@ private:
   double beta0;
   // K by K matrix of digamma of variational parameter for factor pair frequencies
   arma::mat digamma_alpha;
+  arma::mat alpha;
   // Q by 1 vector of digamma of variational parameter for membership grids
   arma::vec digamma_beta;
   double digamma_sum_alpha;
   double digamma_sum_beta;
+  // whether or not to use variational version
+  bool variational;
 };
 #endif

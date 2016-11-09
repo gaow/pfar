@@ -105,6 +105,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, priors 
   loglik <- rep(-999, maxiter)
   niter <- 0
   L <- matrix(0, nrow(X), nrow(F))
+  alpha <- matrix(0, nrow(F), nrow(F))
   status <- 0
   res <- .C("pfa_em",
             as.double(as.vector(X)),
@@ -123,6 +124,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, priors 
             niter = as.integer(niter),
             loglik = as.double(as.vector(loglik)),
             L = as.double(as.vector(L)),
+            alpha = as.double(as.vector(alpha)),
             status = as.integer(status),
             as.integer(as.vector(f1)),
             as.integer(n_f1),
@@ -133,9 +135,11 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, priors 
   ## Process output
   Fout <- matrix(res$F, nrow(F), ncol(F))
   Lout <- matrix(res$L, nrow(L), ncol(L))
+  alphaout <- matrix(res$alpha, nrow(alpha), ncol(alpha))
   Pout <- matrix(res$P, nrow(P), ncol(P))
   loglik <- res$loglik[1:res$niter]
-  return(list(F_init = F, F = Fout, L = Lout, P = Pout, omega = res$omega,
+  return(list(F_init = F, F = Fout, L = Lout, P = Pout,
+              alpha = alphaout, omega = res$omega,
               loglik = loglik, loglik_diff = diff(loglik),
               niter = res$niter, status = res$status))
 }
