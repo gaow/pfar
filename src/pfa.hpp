@@ -245,7 +245,6 @@ public:
     pi_single = arma::mean(delta_single, 1);
   }
 
-
   void update_weights() {
     // update factor weights sum over q grids
     arma::vec pik1k2 = arma::sum(pi_paired, 1);
@@ -258,14 +257,8 @@ public:
     }
   }
 
-
   void get_variational_core() {
-    // this computes loglik and delta
-    // this results in a N by k1k2 by q tensor of loglik
-    // and a k1k2 by q by N tensor of delta_paired
-    // and a N by K matrix of delta_single
-    // and a k1k2 by q matrix of pi_paired
-    // and a k vector of pi_single
+    // See comments at get_loglik_given_nkq()
 #pragma omp parallel for num_threads(n_threads)
     for (size_t qq = 0; qq < q.n_elem; qq++) {
       for (size_t k1 = 0; k1 < F.n_rows; k1++) {
@@ -505,13 +498,13 @@ public:
       }
     } else {
       get_loglik_given_nkq();
+      update_weights();
     }
     return status;
   }
 
   void update() {
     update_LFS();
-    update_weights();
   }
 
 private:
