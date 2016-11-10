@@ -90,7 +90,17 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
 			model.write(f2, 2);
 		}
 		int variational_status = model.fit();
+    if (variational_status != 0) {
+      std::cerr << "[ERROR] variational inference procedure failed!" << std::endl;
+      *status = 1;
+			break;
+    }
 		loglik[*niter] = model.get_loglik();
+    if (loglik[*niter] != loglik[*niter]) {
+      std::cerr << "[ERROR] likelihood nan produced!" << std::endl;
+			*status = 1;
+			break;
+    }
 		if (keeplog) {
 			f1 << "Loglik:\t" << loglik[*niter] << "\n";
 		}

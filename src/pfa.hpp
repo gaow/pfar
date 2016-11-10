@@ -363,14 +363,23 @@ public:
       digamma_beta.at(qq) = digamma(tmp);
       digamma_sum_beta += tmp;
     }
-
     digamma_sum_alpha = digamma(digamma_sum_alpha);
     digamma_sum_beta = digamma(digamma_sum_beta);
-  }
 
-  void get_posterior_mean() {
+    // update posterior mean
     P = alpha / arma::accu(alpha);
     omega = beta / arma::accu(beta);
+  }
+
+  void update_log_posterior() {
+    // add prior part for factor weights
+    for (size_t k1 = 0; k1 < P.n_rows; k1++) {
+      for (size_t k2 = 0; k2 <= k1; k2++) {
+        loglik += (alpha.at(k1, k2) - 1) * std::log(P.at(k1, k2));
+      }
+    }
+    // add prior part for membership grid weights
+    loglik += arma::accu((beta - 1) % arma::log(omega));
   }
 
   void update_LFS() {
@@ -469,12 +478,19 @@ public:
       std::vector<double> logpost(0);
       while (niter <= maxiter) {
         get_posterior_given_nkq();
+        update_variational_params();
+        update_log_posterior();
         logpost.push_back(get_loglik());
+        if (logpost.back() != logpost.back()) {
+          std::cerr << "[ERROR] likelihood nan produced in variational approximation!" << std::endl;
+          status = 1;
+          break;
+        }
         niter++;
         if (niter > 1) {
           double diff = logpost[niter - 1] - logpost[niter - 2];
           if (diff < 0.0) {
-            std::cerr << "[ERROR] likelihood decreased in Variational Approximation!" << std::endl;
+            std::cerr << "[ERROR] likelihood decreased in variational approximation:  \n\tfrom " << logpost[niter - 2] << " to " << logpost[niter - 1] << "!"<< std::endl;
             status = 1;
             break;
           }
@@ -482,11 +498,11 @@ public:
             break;
         }
         if (niter == maxiter) {
+          std::cerr << "[WARNIKNG] variational approximation procedure failed to converge after " << maxiter << " iterations: \n\tlog posterior starts " << logpost.front() << ", ends " << logpost.back() << "!" << std::endl;
           status = 1;
           break;
         }
       }
-      get_posterior_mean();
     } else {
       get_loglik_given_nkq();
     }
