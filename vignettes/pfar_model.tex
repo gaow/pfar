@@ -1,90 +1,115 @@
-\documentclass[12pt]{article}
-\usepackage[utf8x]{inputenc}
-\usepackage{amsmath}
-\usepackage{graphicx}
-\usepackage[margin=1in]{geometry}
+\documentclass[11pt,authoryear]{article}
+\pdfoutput = 1
+\usepackage{fullpage,amsthm,amsmath,natbib,algorithm,algorithmic,enumitem,afterpage,amssymb,setspace,graphicx,amsfonts,array,verbatim,commath,mathrsfs}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows,matrix,positioning, fit, shapes.geometric}
+\usepackage[hang,flushmargin]{footmisc}
+\usepackage[colorlinks=TRUE,citecolor=Blue,linkcolor=BrickRed,urlcolor=PineGreen]{hyperref}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{claim}{Claim}
+\newtheorem{definition}{Definition}
+\newtheorem{exmp}{Example}[section]
+\allowdisplaybreaks
+\renewcommand{\baselinestretch}{1.5}
+\DeclareMathOperator*{\diag}{diag}
+\DeclareMathOperator*{\cov}{cov}
+\DeclareMathOperator*{\rank}{rank}
+\DeclareMathOperator*{\var}{var}
+\DeclareMathOperator*{\tr}{tr}
+\DeclareMathOperator*{\veco}{vec}
+\DeclareMathOperator*{\uniform}{\mathcal{U}niform}
+\DeclareMathOperator*{\argmin}{arg\ min}
+\DeclareMathOperator*{\argmax}{arg\ max}
+\DeclareMathOperator*{\N}{N}
+\DeclareMathOperator*{\gm}{Gamma}
 \DeclareSymbolFont{extraup}{U}{zavm}{m}{n}
 \DeclareMathSymbol{\varheart}{\mathalpha}{extraup}{86}
 \DeclareMathSymbol{\vardiamond}{\mathalpha}{extraup}{87}
-\usepackage{float}
+\bibliographystyle{plainnat}
+\newcommand*{\doi}[1]{\href{http://dx.doi.org/#1}{doi: #1}}
+\newcommand{\bs}[1]{\boldsymbol{#1}}
 
 
 \begin{document}
+\singlespacing
+\title{Paired factor analysis (PFA)}
+\author{Gao Wang, Kushal Dey and Matthew Stephens}
+\maketitle
 
-\section{Paired factor analysis (PFA) model}
+\section{The PFA model}
 
+\subsection{Data and latent variables}
 Let $D_{nj}$ be the data corresponding to $n$-th sample and $j$-th feature, 
 where $n$ runs from $1$ to $N$ and $j$ runs from $1$ to $J$.  
 Suppose these data come from a graph with $K$ nodes (factors) and $E$ edges. In the
 PFA set up $E=\frac{K(K-1)}{2}$.
 
 Let us define latent variables $Z$ and $\Lambda$. $Z_{n}$ is a $(E+K)
-\times 1$ binary vector. We have a prior on $Z_{n,k1,k2,l}$, with the constraint that if $l=0$, then $k_1$ and $k_2$ are both $0$, and if $k_1$ and $k_2$ are non-zero, then $l$ is 0.
+\times 1$ binary vector. We use $Z_{n,k_1,k_2}$ to indicate samples in between
+nodes $k_1$ and $k_2$, and $Z_{n,l}$ to indicate samples near node $l$. Prior
+on $Z$ is defined as:
 
-$$ Pr \left [ Z_{n, k_1, k_2, 0} = 1 \right ] = \pi_{k_1,k_2} \hspace{1 cm} k_1 < k_2$$
-$$ Pr \left [ Z_{n, 0, 0, l} = 1 \right ] = \pi_{l} \hspace{1 cm} l=1,2, \cdots, K$$
+$$ Pr \left [ Z_{n, k_1, k_2} = 1 \right ] = \pi_{k_1,k_2} \hspace{1 cm} k_1 < k_2$$
+$$ Pr \left [ Z_{n, l} = 1 \right ] = \pi_{l} \hspace{1 cm} l=1,2, \cdots, K$$
+with the constraint that
+$$ \sum_{k_1 < k_2}^E \pi_{k_1, k_2} + \sum_{l=1}^{K} \pi_{l} = 1 $$
+Likelihood of $Z$ is
+$$  Pr (Z |  \pi )  = \prod_{n=1}^{N} \prod_{k_1 < k_2}^E \pi_{k1,k2}^{z_{n,k1,k2}} \prod_{l=1}^{K} \pi_{l}^{z_{n,l}} $$
 
-So, we assume that 
-
-$$ \sum_{k_1 < k_2} \pi_{k_1 < k_2} + \sum_{l=1}^{K} \pi_{l} = 1 $$
-
-$$  Pr (Z |  \pi )  = \prod_{n=1}^{N} \prod_{k_1 < k_2}^E \pi_{k1,k2}^{z_{n,k1,k2,0}} \prod_{l=1}^{K} \pi_{l}^{z_{n,0,0,l}} $$
-
-$\Lambda_{n}$ is a $Q \times 1$ binary vector, where $Q$ is the cardinality of the set of values that $q$ can take.
-For computational convenience we assume that $q$ can take a finite set of values between $0$ and $1$, 
-say $1/100, 2/100, \cdots, 99/100, 1$.
+$\Lambda_{n}$ is a $Q \times 1$ binary vector, where $Q$ is the cardinality of
+the set of coordinates for positions in between nodes that samples are fitted
+to. For computational convenience we assume that these coordinates take a finite 
+set of values between $0$ and $1$, say $1/100, 2/100, \cdots, 99/100, 1$.
 
 We have a prior on  $\Lambda$,
 $$ Pr \left [ \Lambda_{n, q} = 1 \right ] = \delta_{q}  $$
 
-$$  Pr (\Lambda | \delta ) = \prod_{n=1}^{N} \prod_{q=1}^{Q} \delta_{q}^{\lambda_{nq}} $$
+$$  Pr (\Lambda | \delta ) = \prod_{n=1}^{N} \prod_{q=1}^{Q} \delta_{q}^{\lambda_{n,q}} $$
 
-For data on the graph given edge $(k_1, k_2)$ and position on edge $q$ we assume the model 
+\subsection{The model likelihood}
+For data on the graph given a pair of nodes $(k_1, k_2)$ and position $q$ on the
+edge we assume a simple mixture model 
 
-\begin{eqnarray}
- E \left [ D_{nj} | Z_{n, k_1, k_2, 0} = 1, \Lambda_{n,q}=1, F \right] = q F_{k1,j} + (1-q) F_{k2,j}
-\end{eqnarray}
-
-\begin{eqnarray}
- E \left [ D_{nj} | Z_{0, 0, l} = 1, F \right] =  F_{l,j} 
-\end{eqnarray}
+\begin{align}
+ E \left [ D_{nj} | Z_{n, k_1, k_2} = 1, \Lambda_{n,q}=1, F \right] &= q
+  F_{k_1,j} + (1-q) F_{k_2,j} \hspace{1 cm} k_1<k_2 \nonumber \\
+ E \left [ D_{nj} | Z_{n,l} = 1, F \right] &= F_{l,j} \hspace{1 cm} k_1 = k_2 = l 
+\end{align}
 
 Where $F$ is a $K\times J$ matrix of factors. 
 Then we can marginalize over $Z$ and $\Lambda$, assuming as a first pass 
 that the data is Gaussian in its distribution,
 
-$$ Pr \left [ D_{n} | Z_{n, k_1, k_2}=1, \delta, F, s^2_{j=1,2,\cdots,J} \right ] = \sum_{q} \delta_{q} Pr \left [D_{n} | Z_{n, k_1, k_2}=1, \Lambda_{n, q}=1, F, s^2_{j=1,2,\cdots,J} \right ] $$
-
 \begin{multline}
  $$ Pr \left [ D_{n} | \pi, \delta, F, s^2_{j=1,2,\cdots,J} \right ] = \sum_{k_1 < k_2}
- \pi_{k_1, k_2} Pr \left [ D_{n} | Z_{n, k_1, k_2, 0}=1, \delta, F, s^2_{j=1,2,\cdots,J} \right ]  \\
-   \qquad \qquad +  \sum_{l} \pi_{l} Pr \left [ D_{n} | Z_{n, 0, 0, l}=1,  F, s^2_{j=1,2,\cdots,J} \right ]$$
+ \pi_{k_1, k_2} Pr \left [ D_{n} | Z_{n, k_1, k_2}=1, \delta, F, s^2_{j=1,2,\cdots,J} \right ]  \\
+   \qquad +  \sum_{l} \pi_{l} Pr \left [ D_{n} | Z_{n, l}=1,  F, s^2_{j=1,2,\cdots,J} \right ]$$
  \end{multline}
- 
- 
 
-where $s^2_{j}$ is the residual variance of the $j$th feature.
+where 
+
+$$ Pr \left [ D_{n} | Z_{n, k_1, k_2}=1, \delta, F, s^2_{j=1,2,\cdots,J} \right ] = \sum_{q} \delta_{q} Pr \left [D_{n} | Z_{n, k_1, k_2}=1, \Lambda_{n, q}=1, F, s^2_{j=1,2,\cdots,J} \right ] $$
+
+and $s^2_{j}$ is the residual variance of the $j$th feature.
  
-We define the joint prior over the edges and the fraction of the edge represented as 
-
-$$ \pi_{k_1,k_2, q} = \pi_{k_1, k_2} \delta_{q} \hspace{1 cm} k_1 < k_2 $$
-
 The overall likelihood 
 
-$$ L(\pi, F) = \prod_{n=1}^{N} Pr \left [ D_{n} | \pi, F, s^2_{j=1,2,\cdots,J} \right ] $$
-
-or we can write it as 
-
-\begin{multline}
-$$L(\pi, F) = \prod_{n=1}^{N} \left [ \sum_{k_1 < k_2} \sum_{q=1}^{Q} \left [ \pi_{k_1,k_2, q} \times \prod_{j=1}^{J} N \left (D_{nj}; q F_{k_1,g} + (1-q) F_{k_2, g}, s^2_{j} \right) \right ]   + \right. \\
-\left.   \qquad \sum_{l} \left [ \pi_{l} \times \prod_{j=1}^{J} N \left (D_{nj}; F_{l,g} , s^2_{j} \right) \right ] \right]$$
-\end{multline}
+\begin{align}
+L(\pi, F) &= \prod_{n=1}^{N} Pr \left [ D_{n} | \pi, F, s^2_{j=1,2,\cdots,J}
+\right ] \nonumber \\
+ &= \prod_{n=1}^{N} \left [ \sum_{k_1 < k_2} \sum_{q=1}^{Q} \left [ \pi_{k_1,k_2, q} \times \prod_{j=1}^{J} N \left (D_{nj}; q F_{k_1,j} + (1-q) F_{k_2, j}, s^2_{j} \right) \right ] + \right.\nonumber \\
+ & \left. \sum_{l} \left [ \pi_{l} \times \prod_{j=1}^{J} N \left (D_{nj}; F_{l,j} , s^2_{j} \right) \right ] \right]
+\end{align}
 
 And the log likelihood
 
 \begin{multline}
-\ln {L (\pi, F)} = \sum_{n=1}^{N} \ln \left (\sum_{k_1 < k_2} \sum_{q} \left [ \pi_{k_1,k_2, q} \times \prod_{j=1}^{J} N \left (D_{nj}; q F_{k_1,g} + (1-q) F_{k_2, g}, s^2_{j} \right) \right ] + \right . \\
-\left. \qquad \sum_{l=1}^{K} \pi_{l}  \times \prod_{j=1}^{J} N \left (D_{nj}; F_{l,g}, s^2_{j} \right)\right )
+\ln {L (\pi, F)} = \sum_{n=1}^{N} \ln \left (\sum_{k_1 < k_2} \sum_{q} \left [ \pi_{k_1,k_2, q} \times \prod_{j=1}^{J} N \left (D_{nj}; q F_{k_1,j} + (1-q) F_{k_2, j}, s^2_{j} \right) \right ] + \right . \\
+\left. \qquad \sum_{l=1}^{K} \pi_{l}  \times \prod_{j=1}^{J} N \left (D_{nj}; F_{l,j}, s^2_{j} \right)\right )
 \end{multline}
 
 This is the quantity we want to maximize. 
