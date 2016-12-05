@@ -6,6 +6,7 @@
 #' @param P [K, K] initial factor frequency matrix: the lower triangle is pair frequencies,
 #' the diagonal is single factor frequencies.
 #' @param q [C, 1] / [int] defines initial vector of possible membership loadings, a discrete set
+#' @param priors [double, double] priors for edge weights and grid weights
 #' @param omega [C, 1] / [int] initial weight of membership loadings, a discrete set corresponding to q
 #' @param control \{tol = 1E-5, maxiter = 10000, logfile = NULL, n_cpu = 1\} list of runtime variables
 #' @return A list with elements below:
@@ -39,7 +40,8 @@
 #' @useDynLib pfar
 #' @export
 
-pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control = NULL) {
+pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, priors = NULL,
+                control = NULL) {
   ## Initialize data
   if (is.null(F) && is.null(K)) {
     stop("[ERROR] Please provide either K or F!")
@@ -68,6 +70,9 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
   if (is.null(omega)) {
     omega <- rep(1/length(q), length(q))
   }
+  if (is.null(priors)) {
+    priors <- c(2 / ((K + 1) * K), 1)
+  }
   tol <- as.double(control$tol)
   if (length(tol) == 0 || tol <= 0) {
     tol <- 1E-4
@@ -95,10 +100,13 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
   stopifnot(nrow(F) == nrow(P))
   stopifnot(nrow(P) == ncol(P))
   stopifnot(length(q) == length(omega))
+  stopifnot(length(priors) == 2)
   ## factor analysis
   loglik <- rep(-999, maxiter)
   niter <- 0
   L <- matrix(0, nrow(X), nrow(F))
+  alpha <- matrix(0, nrow(F), nrow(F))
+  beta <- rep(0, length(q))
   status <- 0
   res <- .C("pfa_em",
             as.double(as.vector(X)),
@@ -110,11 +118,15 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
             as.integer(ncol(X)),
             as.integer(nrow(F)),
             as.integer(length(q)),
+            as.double(priors[1]),
+            as.double(priors[2]),
             as.double(tol),
             as.integer(maxiter),
             niter = as.integer(niter),
             loglik = as.double(as.vector(loglik)),
             L = as.double(as.vector(L)),
+            alpha = as.double(as.vector(alpha)),
+            beta = as.double(as.vector(beta)),
             status = as.integer(status),
             as.integer(as.vector(f1)),
             as.integer(n_f1),
@@ -125,9 +137,11 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
   ## Process output
   Fout <- matrix(res$F, nrow(F), ncol(F))
   Lout <- matrix(res$L, nrow(L), ncol(L))
+  alphaout <- matrix(res$alpha, nrow(alpha), ncol(alpha))
   Pout <- matrix(res$P, nrow(P), ncol(P))
   loglik <- res$loglik[1:res$niter]
-  return(list(F_init = F, F = Fout, L = Lout, P = Pout, omega = res$omega,
+  return(list(F_init = F, F = Fout, L = Lout, P = Pout,
+              alpha = alphaout, beta = res$beta, omega = res$omega,
               loglik = loglik, loglik_diff = diff(loglik),
               niter = res$niter, status = res$status))
 }
