@@ -3,7 +3,8 @@
 #' @param X [N, J] matrix of observed data
 #' @param K [int] number of factors
 #' @param F [K, J] initial factor matrix
-#' @param P [K, K] initial factor pair frequency matrix
+#' @param P [K, K] initial factor frequency matrix: the lower triangle is pair frequencies,
+#' the diagonal is single factor frequencies.
 #' @param q [C, 1] / [int] defines initial vector of possible membership loadings, a discrete set
 #' @param omega [C, 1] / [int] initial weight of membership loadings, a discrete set corresponding to q
 #' @param control \{tol = 1E-5, maxiter = 10000, logfile = NULL, n_cpu = 1\} list of runtime variables
@@ -53,7 +54,8 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
   if (is.null(P)) {
     # Initialize P uniformly
     P <- matrix(0, K, K)
-    P[lower.tri(P)] <- 2 / ((K - 1) * K)
+    P[lower.tri(P)] <- 2 / ((K + 1) * K)
+    diag(P) <- 2 / ((K + 1) * K)
   }
   if (is.null(q)) {
     # Initialze q to be 0/100, 1/100, 2/100, ..., 1
@@ -144,8 +146,8 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, omega = NULL, control
 #' @export
 
 #function to find the log of the sum of exp(lx).
-lsum=function(lx){
-  m = max(lx)
+lsum <- function(lx){
+  m <- max(lx)
   m + log(sum(exp(lx-m)))
 }
 
