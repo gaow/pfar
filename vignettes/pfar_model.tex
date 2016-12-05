@@ -50,22 +50,20 @@ PFA set up $E=\frac{K(K-1)}{2}$.
 
 Let us define latent variables $Z$ and $\Lambda$. $Z_{n}$ is a $(E+K)
 \times 1$ binary vector. We use $Z_{n,k_1,k_2}$ to indicate samples in between
-nodes $k_1$ and $k_2$, and $Z_{n,l}$ to indicate samples near node $l$. Prior
-on $Z$ is defined as:
-
+nodes $k_1$ and $k_2$, and $Z_{n,l}$ to indicate samples near node $l$:
 $$ Pr \left [ Z_{n, k_1, k_2} = 1 \right ] = \pi_{k_1,k_2} \hspace{1 cm} k_1 < k_2$$
 $$ Pr \left [ Z_{n, l} = 1 \right ] = \pi_{l} \hspace{1 cm} l=1,2, \cdots, K$$
 with the constraint that
 $$ \sum_{k_1 < k_2}^E \pi_{k_1, k_2} + \sum_{l=1}^{K} \pi_{l} = 1 $$
 Likelihood of $Z$ is
-$$  Pr (Z |  \pi )  = \prod_{n=1}^{N} \prod_{k_1 < k_2}^E \pi_{k1,k2}^{z_{n,k1,k2}} \prod_{l=1}^{K} \pi_{l}^{z_{n,l}} $$
+$$  Pr (Z |  \pi )  = \prod_{n=1}^{N} \prod_{k_1 < k_2}^E \pi_{k_1,k_2}^{z_{n,k_1,k_2}} \prod_{l=1}^{K} \pi_{l}^{z_{n,l}} $$
 
 $\Lambda_{n}$ is a $Q \times 1$ binary vector, where $Q$ is the cardinality of
 the set of coordinates for positions in between nodes that samples are fitted
 to. For computational convenience we assume that these coordinates take a finite 
 set of values between $0$ and $1$, say $1/100, 2/100, \cdots, 99/100, 1$.
 
-We have a prior on  $\Lambda$,
+We have for density of $\Lambda$,
 $$ Pr \left [ \Lambda_{n, q} = 1 \right ] = \frac{1}{Q} $$
 
 
@@ -93,14 +91,16 @@ where
 
 $$ Pr \left [ D_{n} | Z_{n, k_1, k_2}=1, \delta, F, s^2_{j=1,2,\cdots,J} \right ] = \sum_{q} \frac{1}{Q} Pr \left [D_{n} | Z_{n, k_1, k_2}=1, \Lambda_{n, q}=1, F, s^2_{j=1,2,\cdots,J} \right ] $$
 
-and $s^2_{j}$ is the residual variance of the $j$th feature.
- 
+and $s^2_{j}$ is the residual variance of the $j$th feature. Let
+
+$$\pi_{k_1, k_2, q} = \pi_{k_1, k_2}\times\frac{1}{Q} \hspace{1 cm} k_1 < k_2$$
+
 The overall likelihood 
 
 \begin{align}
 L(\pi, F) &= \prod_{n=1}^{N} Pr \left [ D_{n} | \pi, F, s^2_{j=1,2,\cdots,J}
 \right ] \nonumber \\
- &= \prod_{n=1}^{N} \left [ \sum_{k_1 < k_2} \sum_{q=1}^{Q} \left [ \frac{1}{Q}\pi_{k_1,k_2} \times \prod_{j=1}^{J} N \left (D_{nj}; q F_{k_1,j} + (1-q) F_{k_2, j}, s^2_{j} \right) \right ] + \right.\nonumber \\
+ &= \prod_{n=1}^{N} \left [ \sum_{k_1 < k_2} \sum_{q=1}^{Q} \left [\pi_{k_1,k_2,q} \times \prod_{j=1}^{J} N \left (D_{nj}; q F_{k_1,j} + (1-q) F_{k_2, j}, s^2_{j} \right) \right ] + \right.\nonumber \\
  & \left. \sum_{l} \left [ \pi_{l} \times \prod_{j=1}^{J} N \left (D_{nj}; F_{l,j} , s^2_{j} \right) \right ] \right]
 \end{align}
 
@@ -116,20 +116,17 @@ This is the quantity we want to maximize.
 \section{EM algorithm}
 \subsection{E step}
 
-We assume that $q$ can take a finite set of values between $0$ and $1$, 
-say $1/100, 2/100, \cdots, 90/100, 1$.
-
 Suppose we have run upto $m$ iterations. For the $(m+1)$th iteration, we have 
 
 \begin{eqnarray} \nonumber
-\delta^{(m+1)}_{n, k_1, k_2, 0} &=& Pr \left [ Z_{n, k1, k2, 0} = 1 | \pi^{(m)}, F^{(m)}, s^{(m)}_{j=1,2,\cdots,J}, D_{n} \right ] \\ \nonumber
- &\propto& Pr \left [ Z_{n, k1, k2,0} = 1 \right] \sum_{q=1}^{Q} Pr \left [ \lambda_{n,q} = 1 \right] Pr \left [ D_{n} | \pi^{(m)}, F^{(m)}, s^{(m)}_{j=1,2,\cdots,J}, Z_{n, k1, k2, 0}= 1, \lambda_{n, q}=1 \right] \\ \nonumber
+\delta^{(m+1)}_{n, k_1, k_2} &=& Pr \left [ Z_{n, k_1, k_2} = 1 | \pi^{(m)}, F^{(m)}, s^{(m)}_{j=1,2,\cdots,J}, D_{n} \right ] \\ \nonumber
+ &\propto& Pr \left [ Z_{n, k_1, k_2} = 1 \right] \sum_{q=1}^{Q} Pr \left [ \lambda_{n,q} = 1 \right] Pr \left [ D_{n} | \pi^{(m)}, F^{(m)}, s^{(m)}_{j=1,2,\cdots,J}, Z_{n, k_1, k_2}= 1, \lambda_{n, q}=1 \right] \\ \nonumber
  &\propto& \pi^{(m)}_{k_1,k_2} \sum_{q=1}^{Q} \left [ \prod_{j} N \left (D_{nj} | qF^{(m)}_{k_1,j} + (1-q)F^{(m)}_{k_2,j}, {s_j^{(m)}}^2 \right) \right ] \\ \nonumber
 \end{eqnarray}
 
 \begin{eqnarray} \nonumber
-\delta^{(m+1)}_{n, 0, 0, l}  &=& Pr \left [ Z_{n, 0, 0, l} = 1  |  \pi^{(m)}, F^{(m)}, s^{(m)}_{j=1,2,\cdots,J}, D_{n} \right ] \\ \nonumber 
-& \propto & Pr \left [ Z_{n, 0, 0, l} = 1 \right] Pr \left [ D_{n} | \pi^{(m)}, F^{(m)}, s^{(m)}_{j=1,2,\cdots,J}, Z_{n, 0, 0, l}= 1 \right] \\ \nonumber 
+\delta^{(m+1)}_{n, l}  &=& Pr \left [ Z_{n, l} = 1  |  \pi^{(m)}, F^{(m)}, s^{(m)}_{j=1,2,\cdots,J}, D_{n} \right ] \\ \nonumber 
+& \propto & Pr \left [ Z_{n, l} = 1 \right] Pr \left [ D_{n} | \pi^{(m)}, F^{(m)}, s^{(m)}_{j=1,2,\cdots,J}, Z_{n, l}= 1 \right] \\ \nonumber
 & \propto & \pi^{(m)}_{l}  \prod_{j} N \left (D_{nj} | F^{(m)}_{l,j} , {s_j^{(m)}}^2 \right) \\  \nonumber
 \end{eqnarray}
 
@@ -138,173 +135,51 @@ where ${s_j^{(m)}}^2$ is the residual variance of feature $j$.
 
 We normalize $\delta$ so that 
 
-$$ \sum_{k_1 < k_2} \delta^{(m+1)}_{n, k_1, k_2, 0}  + \sum_{l=1}^{K} \delta^{(m+1)}_{n, 0, 0, l}= 1 \hspace{1 cm} \forall n $$
+$$ \sum_{k_1 < k_2} \delta^{(m+1)}_{n, k_1, k_2}  + \sum_{l=1}^{K} \delta^{(m+1)}_{n, l}= 1 \hspace{1 cm} \forall n $$
 
 We define 
 
-$$ \pi^{(m+1)}_{k_1, k_2} = \frac{1}{N}\sum_{n=1}^{N} \delta^{(m+1)}_{n, k_1, k_2, 0} $$
+$$ \pi^{(m+1)}_{k_1, k_2} = \frac{1}{N}\sum_{n=1}^{N} \delta^{(m+1)}_{n, k_1, k_2} $$
 
-$$ \pi^{(m+1)}_{l} = \frac{1}{N}\sum_{n=1}^{N} \delta^{(m+1)}_{n, 0, 0, l} $$
+$$ \pi^{(m+1)}_{l} = \frac{1}{N}\sum_{n=1}^{N} \delta^{(m+1)}_{n, l} $$
 
 We have therefore updated $\pi^{(m)}_{k_1, k_2}$ to $\pi^{(m+1)}_{k_1, k_2}$.
 
-In the M step, we define 
+\subsubsection{Variational inference}
 
-$$ \delta^{(m+1)}_{n, k_1, k_2, 0, q} =  \delta^{(m+1)}_{n, k_1, k_2, 0} \times \frac{1}{Q}  $$ 
-
-
-%\subsubsection{Variational EM  - Model 1}
-%
-%In this set up, we assume prior distributions of $\pi$ and $\nu$ as follows
-%
-%$$ Pr (\pi | \alpha_{0}) = C (\alpha_0) \prod_{k_1 < k_2} \pi_{k1, k2}^{\alpha_0 -1} \prod_{l=1}^{L} \pi_{l}^{\alpha_0 -1}$$
-%
-%Similarly the prior distribution for $\nu$ is 
-%
-%$$ Pr (\nu | \beta_0) = C (\beta_0) \prod_{q=1}^{Q} \nu_{q}^{\beta_0 -1 }  $$
-%
-%The likelihood above can be written as 
-%
-%\begin{multline}
-%p (D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) = \prod_{n=1}^{N} \left [ \prod_{k_1 < k_2} \prod_{q=1}^{Q} \left [ \prod_{j=1}^{J} N (D_{ng} | qF_{k1,g} + (1-q)F_{k2,g}, s^2_{g}) \right ]^{\Lambda_{nq}Z_{n, k1, k2, 0}}   \right. \\
-%\qquad \left. \times \prod_{l} \left [ \prod_{j=1}^{J} N (D_{ng} | F_{l,g}, s^2_{g}) \right ]^{Z_{n, 0, 0, l}} \right] 
-%\end{multline}
-%
-%The joint probablity distribution distribution is given by 
-%
-%$$ p (D, Z, \Lambda, \pi, \nu | F, s_{j=1,2,\cdots,J}, \alpha_{0}, \beta_{0}) = p (\pi | \alpha_0) p (\nu | \beta_0)  p (\Lambda | \nu) p (Z | \pi) p (D | Z, \Lambda, F, s_{j=1,2,\cdots,J})  $$
-%
-%
-%We assume the following mean field variational distribution. In the first model, we assume the two latent variables $Z$ and $\Lambda$ are independent. 
-%
-%$$ q(Z, \Lambda, \pi, \nu) = q(Z) q(\Lambda) q(\pi) q(\nu) $$
-%
-%The variational distribution for $Z$
-%
-%\begin{eqnarray} \nonumber
-%\ln q^{\star} (Z)  & = & E_{\pi, \nu, \Lambda} \left [ \ln p(\pi|\alpha_0)
-%  + \ln p(\nu | \beta_0) + \ln p(\Lambda | \nu) + \ln p(Z | \pi) 
-%  + \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right ] \\  \nonumber
-%  & = & E_{\pi, \nu, \Lambda} \left [ \ln p(Z | \pi) + 
-% \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right] + constant \\  \nonumber
-%  & = & \sum_{n=1}^{N} \sum_{k_1 < k_2} z_{n, k1, k2} E_{\pi} \left [ \ln (\pi_{k1,k2}) \right ] + \sum_{n=1}^{N} \sum_{k_1 < k_2}  z_{n, k1, k2} \sum_{q} E_{\Lambda}(\lambda_{nq}) \left [ - \sum_{j=1}^{J} \ln (s_j) \right . \\ \nonumber
-%  && \left. \qquad \qquad \qquad - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right]   \nonumber
-%\end{eqnarray}
-%
-%\begin{eqnarray} \nonumber
-%\ln q^{\star} (\Lambda)  & = & E_{\pi, \nu, Z} \left [ \ln p(\pi|\alpha_0) + \ln p(\nu | \beta_0) + \ln p(\Lambda | \nu) + \ln p(Z | \pi) + \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right ] \\  \nonumber
-%   & = & E_{\pi, \nu, Z} \left [ \ln p(\Lambda | \nu) + \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right] + constant  \\  \nonumber
-%& = & \sum_{n=1}^{N} \sum_{q=1}^{Q} \lambda_{n,q} E_{\nu} \left [ \ln (\nu_{q}) \right ] + \sum_{n=1}^{N} \sum_{q} \lambda_{nq} \sum_{k_1 < k_2} E_{Z}(z_{n, k1, k2}) \left [ - \sum_{j=1}^{J} \ln (s_j) \right .  \\ \nonumber
-%&& \left. \qquad \qquad \qquad   - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right]   \nonumber
-%\end{eqnarray}
-%
-%So we get 
-%
-%$$ q^{\star}(Z) \propto \prod_{n=1}^{N} \prod_{k_1 < k_2} \rho_{n, k1, k2}^{Z_{n,k1,k2}} $$
-%
-%where  we define
-%
-%$$ \rho_{n, k1, k2} \propto exp \left (E_{\pi} \left [ \ln (\pi_{k1,k2}) \right ]   + \sum_{q} E_{\Lambda}(\lambda_{nq}) \left [ - \sum_{j=1}^{J} \ln (s_j)  - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \right) $$
-%
-%$$ \rho_{n, k1, k2} \propto exp \left (E_{\pi} \left [ \ln (\pi_{k1,k2}) \right ]   + \sum_{q} \nu_{nq} \left [ - \sum_{j=1}^{J} \ln (s_j)  - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \right) $$
-%
-%$$ \rho_{n, k1, k2} \propto exp \left ( \psi_{a_{k1,k2}} - \psi(\sum_{k1 < k2} a_{k1,k2})   +  \left [ - \sum_{j=1}^{J} \ln (s_j)  - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \right) $$
-%
-%$\rho_{n,k1,k2}$ is normalized to sum to 1 for each $n$ over $k1$ and $k2$.
-%
-%We also get
-%
-%$$ q^{\star}(\Lambda) \propto \prod_{n=1}^{N} \prod_{q=1}^{Q} \nu_{nq}^{\Lambda_{nq}} $$
-%
-%where 
-%
-%$$ \nu_{nq}  \propto exp \left (  E_{\nu} \left [ \ln (\nu_{q}) \right ] + \sum_{k_1 < k_2} E_{Z}(z_{n, k1, k2}) \left [ - \sum_{j=1}^{J} \ln (s_j) - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right ] \right ) $$
-%
-%$$ \nu_{nq} \propto exp \left (  E_{\nu} \left [ \ln (\nu_{q}) \right ] + \sum_{k_1 < k_2} \rho_{n,k1,k2} \left [ - \sum_{j=1}^{J} \ln (s_j) - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right ] \right ) $$
-%
-%
-%$$ \nu_{nq} \propto exp \left (  \psi(b_{q}) - \psi(\sum_{q=1}^{Q} b_{q}) +  \left [ - \sum_{j=1}^{J} \ln (s_j) - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right ] \right ) $$
-%
-%$\nu_{nq}$ are normalized to sum to 1.
-%
-%We can also derive variational distributions similarly for $\pi$ and $\nu$.
-%
-%\begin{eqnarray} \nonumber
-%\ln q^{\star} (\pi) &= & E_{\Lambda, Z, \nu} \left [ \ln p(\pi|\alpha_0) + \ln p(\nu | \beta_0) + \ln p(\Lambda | \nu) + \ln p(Z | \pi) + \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right ] \\ \nonumber
-%  & = & E_{Z} \left [ \ln p(Z | \pi) \right] + \ln p(\pi | \alpha_0) + constant \\ \nonumber
-%  & = & \sum_{n=1}^{N}\sum_{k1 < k2} E(z_{n,k1,k2}) \ln \pi_{k1,k2} + (\alpha_0 -1) \sum_{k1 < k2} \ln \pi_{k1,k2} \\ \nonumber
-%  & = & \sum_{k1 < k2} \left [ \sum_{n=1}^{N} \rho_{n,k1,k2} + (\alpha_0 -1) \right] \ln \pi_{k} \\ \nonumber
-%\end{eqnarray}
-%
-%We define 
-%
-%$$ a_{k1,k2} = \alpha_0 + \sum_{n=1}^{N} \rho_{n,k1,k2} $$
-%
-%$$ q^{\star} (\pi) = Dir(\pi | a)  $$
-%
-%
-%\begin{eqnarray} \nonumber
-%\ln q^{\star} (\nu) & = & E_{\Lambda, Z, \pi} \left [ \ln p(\pi|\alpha_0)+ \ln p(\nu | \beta_0) + \ln p(\Lambda | \nu) + \ln p(Z | \pi) + \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right ] \\  \nonumber
-%  & = & E_{\Lambda} \left [ \ln p(\Lambda | \nu) \right] + \ln p(\nu | \beta_0) + constant \\ \nonumber
-%  & = & \sum_{n=1}^{N}\sum_{q=1}^{Q} E(\lambda_{n,q}) \ln \nu_{q} + (\beta_0 -1) \sum_{q=1}^{Q} \ln \nu_{q} \\ \nonumber
-%  & = & \sum_{q=1}^{Q} \left [ \sum_{n=1}^{N} \nu_{n,q} + (\beta_0 -1) \right] \ln \nu_{q} \\ \nonumber
-%\end{eqnarray}
-%
-%We define 
-%
-%$$ b_{q} = \beta_0 + \sum_{n=1}^{N} \nu_{n,q} $$
-%
-%$$ q^{\star} (\nu) = Dir(\nu | b)  $$
-%
-%
-%We alternate between the Variational E and M steps, $E$ steps being the ones where we compute the responsibilities $\rho_{n,k1,k2}$ and $\nu_{n,q}$ and the M step is where we update the variational distribution of the parameters $\pi$ and $\nu$. 
-%
-%We can start with $a= \alpha_0$ and $b=\beta_0$. We can then estimate $\rho_{n,k1,k2}$ and also $\nu_{nq}$ and then then product of these two terms to get new responsibility
-%
-%$$ \delta_{n, k1, k2, q} = \rho_{n, k1, k2} \nu_{nq} $$
-%
-%and we use this $\delta_{n, k1, k2, q}$ as the responsibility for the M-step of the original EM updates. 
-%
-\subsubsection{Variational EM  - Model 2}
-
-In model 2, we do not assume independence of the latent variables $Z$ and $\Lambda$ and instead estimate their joint variational distribution. 
+Now we introduce prior on parameter $\pi$ for the latent variable $Z$. The
+motivation is to induce sparsity on factor pairs we identify from the model.  
+Here we estimate their joint variational distribution:
 
 $$ q(Z, \Lambda, \pi) = q(Z) q(\pi) q(\Lambda) $$
 
-We assume up front that $q*(\Lambda) = \prod_{n=1}^{N} \left [ \frac{1}{100} \right ]^{\Lambda_{nq}} $. 
+We assume up front that $q^{\star}(\Lambda) = \prod_{n=1}^{N} \left [
+  \frac{1}{Q} \right ]^{\Lambda_{nq}} $. For $\pi$ we use a Dirichlet prior as follows
 
-In this set up, we assume prior distributions of $\pi$  as follows
-
-$$ Pr (\pi | \alpha_{0}) = C (\alpha_0) \prod_{k_1 < k_2} \pi_{k1, k2}^{\alpha_0 -1} \prod_{l=1}^{L} \pi_{l}^{\alpha_0 -1}$$
-
-%Similarly the prior distribution for $\nu$ is 
-%
-%$$ Pr (\nu | \beta_0) = C (\beta_0) \prod_{q=1}^{Q} \nu_{q}^{\beta_0 -1 }  $$
-%
-
+$$ Pr (\pi | \alpha_{0}) = C (\alpha_0) \prod_{k_1 < k_2}^E \pi_{k_1, k_2}^{\alpha_0 -1} \prod_{l=1}^{L} \pi_{l}^{\alpha_0 -1}$$
 
 \begin{eqnarray}
 \ln q^{\star} (Z)  & = & E_{\pi, \Lambda} \left [ \ln p(\pi|\alpha_0) + \ln p(\Lambda) + \ln p(Z | \pi) + \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right ] \\ \nonumber
   & = & E_{\pi, \Lambda} \left [ \ln p(Z | \pi) + \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right] + constant \\\nonumber
-  & = & \sum_{n=1}^{N} \sum_{k_1 < k_2}  z_{n, k1, k2, 0} E_{\pi} \left [ \ln (\pi_{k1, k2}) \right ] \\ \nonumber
-  &&  + \sum_{n=1}^{N} \sum_{k_1 < k_2}  z_{n, k1, k2, 0} \sum_{q=1}^{Q} \frac{1}{Q} \left [ - \sum_{j=1}^{J} \ln (s_j) - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \\ \nonumber
-  &&  +  \sum_{n=1}^{N} \sum_{l}  z_{n, 0, 0, l} \left [ - \sum_{j=1}^{J} \ln (s_j) - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - F_{l,j} )^2}{2s^2_j} \right] \\ \nonumber 
-  && +  \sum_{n=1}^{N} \sum_{l=1}^{K} z_{n, 0, 0, l} E_{\pi} \left [ \ln (\pi_{l}) \right ] \\ \nonumber
+  & = & \sum_{n=1}^{N} \sum_{k_1 < k_2}  z_{n, k_1, k_2} E_{\pi} \left [ \ln (\pi_{k_1, k_2}) \right ] \\ \nonumber
+  &&  + \sum_{n=1}^{N} \sum_{k_1 < k_2}  z_{n, k_1, k_2} \sum_{q=1}^{Q} \frac{1}{Q} \left [ - \sum_{j=1}^{J} \ln (s_j) - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k_1,j} - (1-q)F_{k_2,j})^2}{2s^2_j} \right] \\ \nonumber
+  &&  +  \sum_{n=1}^{N} \sum_{l}  z_{n, l} \left [ - \sum_{j=1}^{J} \ln (s_j) - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - F_{l,j} )^2}{2s^2_j} \right] \\ \nonumber 
+  && +  \sum_{n=1}^{N} \sum_{l=1}^{K} z_{n, l} E_{\pi} \left [ \ln (\pi_{l}) \right ] \\ \nonumber
 \end{eqnarray}
 
 \begin{eqnarray}
 \ln q^{\star} (Z, \Lambda)  & = & E_{\pi} \left [ \ln p(\pi|\alpha_0) +  \ln p(\Lambda ) + \ln p(Z | \pi) + \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right ] \\ \nonumber
   & = & E_{\pi, \nu} \left [ \ln p(Z | \pi) + \ln p(\Lambda ) + \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right] + constant \\\nonumber
-  & = & \sum_{n=1}^{N} \sum_{k_1 < k_2} z_{n, k1, k2, 0}  E_{\pi} \left [ \ln (\pi_{k1, k2}) \right ]  + +  \sum_{n=1}^{N} \sum_{l=1}^{K} z_{n, 0, 0, l} E_{\pi} \left [ \ln (\pi_{l}) \right ] \\ \nonumber
-  &&  + \sum_{n=1}^{N} \sum_{k_1 < k_2} z_{n, k1, k2, 0} \left [ - \sum_{j=1}^{J} \ln (s_j) - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \\ \nonumber
-  &&  +  \sum_{n=1}^{N} \sum_{l}  z_{n, 0, 0, l} \left [ - \sum_{j=1}^{J} \ln (s_j) - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - F_{l,j} )^2}{2s^2_j} \right] \\ \nonumber 
+  & = & \sum_{n=1}^{N} \sum_{k_1 < k_2} z_{n, k_1, k_2}  E_{\pi} \left [ \ln (\pi_{k_1, k_2}) \right ]  + +  \sum_{n=1}^{N} \sum_{l=1}^{K} z_{n, l} E_{\pi} \left [ \ln (\pi_{l}) \right ] \\ \nonumber
+  &&  + \sum_{n=1}^{N} \sum_{k_1 < k_2} z_{n, k_1, k_2} \left [ - \sum_{j=1}^{J} \ln (s_j) - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k_1,j} - (1-q)F_{k_2,j})^2}{2s^2_j} \right] \\ \nonumber
+  &&  +  \sum_{n=1}^{N} \sum_{l}  z_{n, l} \left [ - \sum_{j=1}^{J} \ln (s_j) - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - F_{l,j} )^2}{2s^2_j} \right] \\ \nonumber 
 \end{eqnarray}
 
 From here one can get 
 
-$$ q^{\star}(Z) \propto \prod_{n=1}^{N} \left[\prod_{k_1 < k_2} \delta_{n, k1, k2, 0}^{Z_{n, k1, k2, 0}}  \prod_{l=1}^{K} \delta_{n, 0, 0, l}^{Z_{n, 0, 0, l}} \right]$$
+$$ q^{\star}(Z) \propto \prod_{n=1}^{N} \left[\prod_{k_1 < k_2} \delta_{n, k_1, k_2}^{Z_{n, k_1, k_2}}  \prod_{l=1}^{K} \delta_{n, l}^{Z_{n, l}} \right]$$
 
-$$ q^{\star} (\pi) \propto  \prod_{k_1 < k_2} \pi_{k1, k2}^{a_{k1,k2,0} -1} \prod_{l=1}^{L} \pi_{l}^{a_{0,0,l} -1}$$
+$$ q^{\star} (\pi) \propto  \prod_{k_1 < k_2} \pi_{k_1, k_2}^{a_{k_1,k_2} -1} \prod_{l=1}^{L} \pi_{l}^{a_{l} -1}$$
 
 %Similarly the prior distribution for $\nu$ is 
 %
@@ -314,21 +189,21 @@ $$ q^{\star} (\pi) \propto  \prod_{k_1 < k_2} \pi_{k1, k2}^{a_{k1,k2,0} -1} \pro
 then 
 
 \begin{multline}
- $$ \delta_{n, k1, k2, 0} \propto exp \left (  E_{\pi} \left [ \ln (\pi_{k1,k2}) \right]  \right. \\
- \left . +  \sum_{q=1}^{Q} \frac{1}{Q} \left [ - \sum_{j=1}^{J} \ln (s_j)  - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \right ) 
+ $$ \delta_{n, k_1, k_2} \propto exp \left (  E_{\pi} \left [ \ln (\pi_{k_1,k_2}) \right]  \right. \\
+ \left . +  \sum_{q=1}^{Q} \frac{1}{Q} \left [ - \sum_{j=1}^{J} \ln (s_j)  - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k_1,j} - (1-q)F_{k_2,j})^2}{2s^2_j} \right] \right ) 
 \end{multline}
 
 \begin{multline}
-  \delta_{n, k1, k2, 0} \propto exp \left ( \psi({a_{k1, k2, 0}}) - \psi(\sum_{l} a_{0, 0, l} + \sum_{k_1 < k_2} a_{k_1, k_2, 0})   \right . \\
-  \left . + \sum_{q=1}^{Q} \frac{1}{Q} \left [ - \sum_{j=1}^{J} \ln (s_j)  - \frac{J}{2} \ln (2 \pi) -  \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k1,j} - (1-q)F_{k2,j})^2}{2s^2_j} \right] \right ) 
+  \delta_{n, k_1, k_2} \propto exp \left ( \psi({a_{k_1, k_2}}) - \psi(\sum_{l} a_{l} + \sum_{k_1 < k_2} a_{k_1, k_2})   \right . \\
+  \left . + \sum_{q=1}^{Q} \frac{1}{Q} \left [ - \sum_{j=1}^{J} \ln (s_j)  - \frac{J}{2} \ln (2 \pi) -  \sum_{j=1}^{J} \frac{(D_{nj} - qF_{k_1,j} - (1-q)F_{k_2,j})^2}{2s^2_j} \right] \right ) 
 \end{multline}
 
 \begin{multline}
-\delta_{n, 0, 0, l} \propto exp \left (  E_{\pi} \left [ \ln (\pi_{l}) \right] +  \left [ - \sum_{j=1}^{J} \ln (s_j)  - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - F_{l,j})^2}{2s^2_j} \right] \right ) 
+\delta_{n, l} \propto exp \left (  E_{\pi} \left [ \ln (\pi_{l}) \right] +  \left [ - \sum_{j=1}^{J} \ln (s_j)  - \frac{J}{2} \ln (2 \pi) - \sum_{j=1}^{J} \frac{(D_{nj} - F_{l,j})^2}{2s^2_j} \right] \right ) 
 \end{multline}
 
 \begin{multline}
-  \delta_{n, 0, 0, l} \propto exp \left ( \psi (a_{0, 0, l}) - \psi(\sum_{l} a_{0, 0, l} + \sum_{k_1 < k_2} a_{k_1, k_2, 0}) + \left [ - \sum_{j=1}^{J} \ln (s_j)  - \frac{J}{2} \ln (2 \pi) -  \sum_{j=1}^{J} \frac{(D_{nj} - F_{l,j})^2}{2s^2_j} \right] \right ) 
+  \delta_{n, l} \propto exp \left ( \psi (a_{l}) - \psi(\sum_{l} a_{l} + \sum_{k_1 < k_2} a_{k_1, k_2}) + \left [ - \sum_{j=1}^{J} \ln (s_j)  - \frac{J}{2} \ln (2 \pi) -  \sum_{j=1}^{J} \frac{(D_{nj} - F_{l,j})^2}{2s^2_j} \right] \right ) 
 \end{multline}
 
 We can also derive variational distributions similarly for $\pi$.
@@ -336,41 +211,20 @@ We can also derive variational distributions similarly for $\pi$.
 \begin{eqnarray} \nonumber
 \ln q^{\star} (\pi) &= & E_{\Lambda, Z} \left [ \ln p(\pi|\alpha_0)  + \ln p(Z | \pi) + \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right ] \\ \nonumber
   & = & E_{Z} \left [ \ln p(Z | \pi) \right] + \ln p(\pi | \alpha_0) + constant \\ \nonumber
-  & = & \sum_{n=1}^{N}\sum_{k1 < k2} E(z_{n, k1, k2, 0}) \ln \pi_{k1,k2} + \sum_{n=1}^{N}\sum_{l=1}^{K} E(z_{n, 0, 0, l}) \ln \pi_{l} +  (\alpha_0 -1) \sum_{k1 < k2} \ln \pi_{k1,k2} \\ \nonumber
-  & = & \sum_{k1 < k2} \left [ \sum_{n=1}^{N} \delta_{n, k1, k2, 0} + (\alpha_0 -1) \right] \ln \pi_{k1, k2} + \sum_{l=1}^{K} \left [ \sum_{n=1}^{N} \delta_{n, 0, 0, l} + (\alpha_0 -1) \right] \ln \pi_{l}  \\ \nonumber
+  & = & \sum_{n=1}^{N}\sum_{k_1 < k_2} E(z_{n, k_1, k_2}) \ln \pi_{k_1,k_2} + \sum_{n=1}^{N}\sum_{l=1}^{K} E(z_{n, l}) \ln \pi_{l} +  (\alpha_0 -1) \sum_{k_1 < k_2} \ln \pi_{k_1,k_2} \\ \nonumber
+  & = & \sum_{k_1 < k_2} \left [ \sum_{n=1}^{N} \delta_{n, k_1, k_2} + (\alpha_0 -1) \right] \ln \pi_{k_1, k_2} + \sum_{l=1}^{K} \left [ \sum_{n=1}^{N} \delta_{n, l} + (\alpha_0 -1) \right] \ln \pi_{l}  \\ \nonumber
 \end{eqnarray}
 
 We define 
 
-$$ a_{k1, k2, 0} = \alpha_0 + \sum_{n=1}^{N} \delta_{n, k1, k2, 0} $$
-$$ a_{0, 0, l} = \alpha_0 + \sum_{n=1}^{N} \delta_{n, 0, 0, l} $$
+$$ a_{k_1, k_2} = \alpha_0 + \sum_{n=1}^{N} \delta_{n, k_1, k_2} $$
+$$ a_{l} = \alpha_0 + \sum_{n=1}^{N} \delta_{n, l} $$
 
 
 $$ q^{\star} (\pi) = Dir(\pi | a)  $$
 
 
-%\begin{eqnarray} \nonumber
-%\ln q^{\star} (\nu) & = & E_{\Lambda, Z, \pi} \left [ \ln p(\pi|\alpha_0)+ \ln p(\nu | \beta_0) + \ln p(\Lambda | \nu) + \ln p(Z | \pi) + \ln p(D | Z, \Lambda, F, s_{j=1,2,\cdots,J}) \right ] \\  \nonumber
-%  & = & E_{\Lambda} \left [ \ln p(\Lambda | \nu) \right] + \ln p(\nu | \beta_0) + constant \\ \nonumber
-%  & = & \sum_{n=1}^{N}\sum_{q=1}^{Q} E(\Lambda_{n,q}) \ln \nu_{q} + (\beta_0 -1) \sum_{q=1}^{Q} \ln \nu_{q} \\ \nonumber
-%  & = & \sum_{q=1}^{Q} \left [ \sum_{n=1}^{N} \sum_{k_1 < k_2} \delta_{n, k1, k2, 0, q} + (\beta_0 -1) \right] \ln \nu_{q} \\ \nonumber
-%\end{eqnarray}
-%
-%We define 
-%
-%$$ b_{q} = \beta_0 + \sum_{n=1}^{N} \sum_{k_1 < k_2} \delta_{n, k1, k2, 0, q} $$
-%
-%$$ q^{\star} (\nu) = Dir(\nu | b)  $$
-%
-
-
-We initialize $\pi$  first, then use $a_{k1,k2}=\alpha_0$  to begin with and estimate $\delta_{n,k1,k2,0}$. Then use the $\delta_{n,k1,k2,0}$ to update $a_{k1,k2}$  and proceed in this way. In this case, we do not assume independence of the $\Lambda$ and $Z$ variational distributions, so this model is more generalized.
-
-Again just as before, set 
-
-$$ \delta_{n,k1,k2,0, q} = \delta_{n,k1,k2,0} \times \frac{1}{Q}  $$
-
-
+We initialize $\pi$  first, then use $a_{k_1,k_2}=\alpha_0$  to begin with and estimate $\delta_{n,k_1,k_2}$. Then use the $\delta_{n,k_1,k_2}$ to update $a_{k_1,k_2}$  and proceed in this way. In this case, we do not assume independence of the $\Lambda$ and $Z$ variational distributions, so this model is more generalized.
 
 \subsection{M step}
 
@@ -381,16 +235,21 @@ $$ \delta_{n,k1,k2,0, q} = \delta_{n,k1,k2,0} \times \frac{1}{Q}  $$
 %
 %We define the complete loglikelihood 
 %
-%$$ log L_{c} \left (\theta; D, Z, \lambda \right ) = log \pi_{k_1,k_2, q} + log L (D | Z, \lambda, q, F) $$
+%$$ log L_{c} \left (\theta; D, Z, \lambda \right ) = log \pi_{k_1,k_2,q} + log L (D | Z, \lambda, q, F) $$
 %
-We take the expectation of this quantity with respect to $\left [ Z, \lambda | D, \theta^{(m)} \right ]$.
+
+We define 
+
+$$ \delta^{(m+1)}_{n, k_1, k_2,q} =  \delta^{(m+1)}_{n, k_1, k_2} \times \frac{1}{Q}  $$ 
+
+and take the expectation of this quantity with respect to $\left [ Z, \lambda | D, \theta^{(m)} \right ]$:
 
 \begin{eqnarray}
- Q (\theta | \theta^{(m)}) \propto - \sum_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q=1}^{Q} \delta^{(m+1)}_{n, k_1, k_2, 0, q}  \sum_{j} \left [ log s^{(m+1)}_{j} + \frac{(D_{nj} - q F_{k_1,j} - (1-q) F_{k_2,j})^2}{2{s_j^{(m+1)}}^2} \right] \\
- -   \sum_{n=1}^{N} \sum_{l=1}^{K} \sum_{q=1}^{Q} \delta^{(m+1)}_{n, 0, 0, l, q}  \sum_{j} \left [ log s^{(m+1)}_{j} + \frac{(D_{nj} - F_{l,j})^2}{2{s_j^{(m+1)}}^2} \right] 
+ Q (\theta | \theta^{(m)}) \propto - \sum_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q=1}^{Q} \delta^{(m+1)}_{n, k_1, k_2, q}  \sum_{j} \left [ log s^{(m+1)}_{j} + \frac{(D_{nj} - q F_{k_1,j} - (1-q) F_{k_2,j})^2}{2{s_j^{(m+1)}}^2} \right] \\
+ -   \sum_{n=1}^{N} \sum_{l=1}^{K} \sum_{q=1}^{Q} \delta^{(m+1)}_{n, l, q}  \sum_{j} \left [ log s^{(m+1)}_{j} + \frac{(D_{nj} - F_{l,j})^2}{2{s_j^{(m+1)}}^2} \right] 
 \end{eqnarray}
 
-We try to maximize this quantity with respect to $F$, So, we can take derivative with respect to $F$ and try to solve the resulting normal equation.
+We try to maximize this quantity with respect to $F$, ie, we can take derivative with respect to $F$ and try to solve the resulting normal equation.
 
 This equation, conditional on $\left [ Z, \lambda | D, \theta^{(m)} \right ]$, can be written as 
 
@@ -411,17 +270,17 @@ If we consider finding the factors on a feature-by-feature basis, we do not need
 \begin{align*}
 L_{nk} =
 \begin{cases}
-    q~\text{or}~(1-q) & \lambda_{n}=q  \; \; Z_{n,k,*, 0}=1 \; \text{or} \;\; Z_{n, *, k, 0} = 1 \\
-    1 & Z_{n,0,0,k}=1 \\
+    q~\text{or}~(1-q) & \lambda_{n}=q  \; \; Z_{n,k,*}=1 \; \text{or} \;\; Z_{n, *, k} = 1 \\
+    1 & Z_{n,k}=1 \\
     0 & \text{o.w.}
 \end{cases}
 \end{align*}
 
 We have 
 
-$$ E_{ Z, \lambda | D, \theta^{(m)}} \left [ L_{nk} \right ] = \sum_{q}  \sum_{k_2 > k} q \delta^{(m+1)}_{n, k, k_2, 0, q}  + \sum_{q}  \sum_{k_1 < k} (1-q) \delta^{(m+1)}_{n, k1, k, 0, q} +  \delta^{(m+1)}_{n, 0, 0, k} $$
+$$ E_{ Z, \lambda | D, \theta^{(m)}} \left [ L_{nk} \right ] = \sum_{q}  \sum_{k_2 > k} q \delta^{(m+1)}_{n, k, k_2, q}  + \sum_{q}  \sum_{k_1 < k} (1-q) \delta^{(m+1)}_{n, k_1, k, q} +  \delta^{(m+1)}_{n, k} $$
 
-$$ E_{ Z, \lambda | D, \theta^{(m)}} \left [ L^2_{nk} \right ] = \sum_{q}  \sum_{k_2 > k} q^2 \delta^{(m+1)}_{n,k,k_2, q}  + \sum_{q}  \sum_{k_1 < k} (1-q)^2 \delta^{(m+1)}_{n,k1,k,q} +  \delta^{(m+1)}_{n, 0, 0, k} $$
+$$ E_{ Z, \lambda | D, \theta^{(m)}} \left [ L^2_{nk} \right ] = \sum_{q}  \sum_{k_2 > k} q^2 \delta^{(m+1)}_{n,k,k_2, q}  + \sum_{q}  \sum_{k_1 < k} (1-q)^2 \delta^{(m+1)}_{n,k_1,k,q} +  \delta^{(m+1)}_{n, 0, 0, k} $$
 
 Also for any $k \neq l$,
 
@@ -449,8 +308,8 @@ from above to solve $F$.
 In the same way as we computed $F$ by solving for the normal equation obtained from taking derivative of the function $Q (\theta | \theta^{(m)})$, we take derivative of the latter with respect to $s^2_{j}$ to obtain EM updates of the residual variance terms. Taking the derivative, we obtain the estimate as 
 
 \begin{multline}
-\widehat{s_{j}^{(m+1)}}^2 = \frac{1}{N}\sum_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \delta^{(m+1)}_{n, k_1, k_2, 0, q} (D_{nj} - q F_{k_1,j} - (1-q) F_{k_2,j})^2 \\
-+  \frac{1}{N}\sum_{n=1}^{N} \sum_{l=1}^{K} \delta^{(m+1)}_{n, 0, 0, l, q} (D_{nj} - F_{l,j} )^2
+\widehat{s_{j}^{(m+1)}}^2 = \frac{1}{N}\sum_{n=1}^{N} \sum_{k_1 < k_2} \sum_{q} \delta^{(m+1)}_{n, k_1, k_2, q} (D_{nj} - q F_{k_1,j} - (1-q) F_{k_2,j})^2 \\
++  \frac{1}{N}\sum_{n=1}^{N} \sum_{l=1}^{K} \delta^{(m+1)}_{n, l, q} (D_{nj} - F_{l,j} )^2
 \end{multline}
 
 where the $F$ are the estimated values of the factors from the previous step.
@@ -458,5 +317,3 @@ where the $F$ are the estimated values of the factors from the previous step.
 We then continue this procedure described above for multiple iterations.
 
 \end{document}
-
-
