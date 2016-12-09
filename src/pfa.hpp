@@ -86,7 +86,7 @@ inline double digamma(double x)
         double r = 1/x, t;
         result += log(x) - 0.5*r;
         r *= r;
-#if 0
+#if 1
         result -= r * (s3 - r * (s4 - r * (s5 - r * (s6 - r * s7))));
 #else
         /* this version for lame compilers */
@@ -116,12 +116,8 @@ public:
     // initialize residual sd with sample sd
     s = arma::vectorise(arma::stddev(D));
     W.set_size(F.n_rows, F.n_rows);
-    delta_paired.set_size(int((F.n_rows - 1) * F.n_rows / 2), q.n_elem, D.n_rows);
-    delta_paired_core.set_size(int((F.n_rows - 1) * F.n_rows / 2), q.n_elem, D.n_rows);
-    delta_single.set_size(D.n_rows, F.n_rows);
-    delta_single_core.set_size(D.n_rows, F.n_rows);
-    pi_paired.set_size(int((P.n_rows - 1) * P.n_rows / 2), q.n_elem);
-    pi_single.set_size(P.n_rows);
+    delta.set_size(D.n_rows, int((F.n_rows + 1) * F.n_rows / 2));
+    delta_core.set_size(D.n_rows, int((F.n_rows + 1) * F.n_rows / 2));
     digamma_alpha.set_size(P.n_rows, P.n_rows);
     digamma_alpha.zeros();
     alpha.zeros();
@@ -135,14 +131,12 @@ public:
     variational = false;
     for (size_t k1 = 0; k1 < F.n_rows; k1++) {
       for (size_t k2 = 0; k2 <= k1; k2++) {
-        if (k2 < k1) {
-          // set factor pair coordinates to avoid
-          // having to compute it at each iteration
-          // (b - 1) * b / 2 - ((b - 1) - a)
-          size_t k1k2 = size_t(k1 * (k1 - 1) / 2 + k2);
-          F_pair_coord[std::make_pair(k1, k2)] = k1k2;
-          F_pair_coord[std::make_pair(k2, k1)] = k1k2;
-        }
+        // set factor pair coordinates to avoid
+        // having to compute it at each iteration
+        // (b + 1) * b / 2 - (b - a)
+        size_t k1k2 = size_t(k1 * (k1 - 1) / 2 + k2);
+        F_pair_coord[std::make_pair(k1, k2)] = k1k2;
+        F_pair_coord[std::make_pair(k2, k1)] = k1k2;
         digamma_alpha.at(k1, k2) = digamma(alpha0);
       }
     }
@@ -165,9 +159,6 @@ public:
         if (variational) {
           alpha.print(out, "Dirichlet posterior parameter for factor pairs:");
           beta.print(out, "Dirichlet posterior parameter for membership grid weights");
-        } else {
-          pi_paired.print(out, "Joint weight for factor pairs and membership grid:");
-          pi_single.print(out, "Joint weight for single factors and membership grid:");
         }
       }
       // W.print(out, "E[L'L] matrix:");
@@ -185,11 +176,8 @@ public:
 
   void get_loglik_given_nkq() {
     // this computes loglik and delta
-    // this results in a N by k1k2 by q tensor of loglik
-    // and a k1k2 by q by N tensor of delta_paired
-    // and a N by K matrix of delta_single
-    // and a k1k2 by q matrix of pi_paired
-    // and a k vector of pi_single
+    // this results in a N by k1k2 matrix of loglik
+    // and a N by k1k2 matrix of delta
 #pragma omp parallel for num_threads(n_threads)
     for (size_t qq = 0; qq < q.n_elem; qq++) {
       for (size_t k1 = 0; k1 < F.n_rows; k1++) {
@@ -361,7 +349,6 @@ public:
 
     // update posterior mean
     P = alpha / arma::accu(alpha);
-    omega = beta / arma::accu(beta);
   }
 
   void update_log_posterior() {
@@ -517,19 +504,16 @@ private:
   // Q by 1 vector of membership grids
   arma::vec q;
   // Q by 1 vector of membership grid weights
+  // we give a constant, uniform input as a computational device
   arma::vec omega;
   // J by 1 vector of residual standard error
   arma::vec s;
-  // K1K2 by Q by N tensor
-  arma::cube delta_paired;
-  arma::cube delta_paired_core;
+  // N by K1K2 matrix
+  arma::mat delta_paired;
+  arma::mat delta_paired_core;
   // N by K matrix
   arma::mat delta_single;
   arma::mat delta_single_core;
-  // K1K2 by Q matrix
-  arma::mat pi_paired;
-  // K vector
-  arma::vec pi_single;
   std::map<std::pair<size_t, size_t>, size_t> F_pair_coord;
   // N by K matrix of loadings
   arma::mat L;

@@ -115,13 +115,14 @@ This is the quantity we want to maximize.
 
 \section{EM algorithm}
 \subsection{E step}
+\subsubsection{Version 1: }
 
 Suppose we have run upto $m$ iterations. For the $(m+1)$th iteration, we have 
 
 \begin{eqnarray} \nonumber
 \delta^{(m+1)}_{n, k_1, k_2} &=& Pr \left [ Z_{n, k_1, k_2} = 1 | \pi^{(m)}, F^{(m)}, s^{(m)}_{j=1,2,\cdots,J}, D_{n} \right ] \\ \nonumber
  &\propto& Pr \left [ Z_{n, k_1, k_2} = 1 \right] \sum_{q=1}^{Q} Pr \left [ \lambda_{n,q} = 1 \right] Pr \left [ D_{n} | \pi^{(m)}, F^{(m)}, s^{(m)}_{j=1,2,\cdots,J}, Z_{n, k_1, k_2}= 1, \lambda_{n, q}=1 \right] \\ \nonumber
- &\propto& \pi^{(m)}_{k_1,k_2} \sum_{q=1}^{Q} \left [ \prod_{j} N \left (D_{nj} | qF^{(m)}_{k_1,j} + (1-q)F^{(m)}_{k_2,j}, {s_j^{(m)}}^2 \right) \right ] \\ \nonumber
+ &\propto& \sum_{q=1}^{Q} \pi^{(m)}_{k_1,k_2} \left [ \prod_{j} N \left (D_{nj} | qF^{(m)}_{k_1,j} + (1-q)F^{(m)}_{k_2,j}, {s_j^{(m)}}^2 \right) \right ] \\ \nonumber
 \end{eqnarray}
 
 \begin{eqnarray} \nonumber
@@ -137,7 +138,7 @@ We normalize $\delta$ so that
 
 $$ \sum_{k_1 < k_2} \delta^{(m+1)}_{n, k_1, k_2}  + \sum_{l=1}^{K} \delta^{(m+1)}_{n, l}= 1 \hspace{1 cm} \forall n $$
 
-We define 
+We define
 
 $$ \pi^{(m+1)}_{k_1, k_2} = \frac{1}{N}\sum_{n=1}^{N} \delta^{(m+1)}_{n, k_1, k_2} $$
 
@@ -145,7 +146,7 @@ $$ \pi^{(m+1)}_{l} = \frac{1}{N}\sum_{n=1}^{N} \delta^{(m+1)}_{n, l} $$
 
 We have therefore updated $\pi^{(m)}_{k_1, k_2}$ to $\pi^{(m+1)}_{k_1, k_2}$.
 
-\subsubsection{Variational inference}
+\subsubsection{Version 2: variational inference}
 
 Now we introduce prior on parameter $\pi$ for the latent variable $Z$. The
 motivation is to induce sparsity on factor pairs we identify from the model.  
