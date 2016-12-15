@@ -184,14 +184,20 @@ public:
           // given k1, k2 and q, density is a N-vector
           // in the end of the loop, the vector should populate a column of a slice of the tensor
           arma::vec Dn_delta = arma::zeros<arma::vec>(D.n_rows);
+          bool update = true
           for (size_t qq = 0; qq < q.n_elem; qq++) {
+            if (k1 == k2 & qq > 0) {
+              update = false;
+              break;
+            }
             for (size_t j = 0; j < D.n_cols; j++) {
               arma::vec density = D.col(j);
               double m = (k2 < k1) ? q.at(qq) * F.at(k2, j) + (1 - q.at(qq)) * F.at(k1, j) : F.at(k1, j);
               Dn_delta += density.transform( [=](double x) { return (normal_pdf_log(x, m, s.at(j))); } );
             }
           }
-          delta.col(F_pair_coord[std::make_pair(k1, k2)]) = Dn_delta + std::log(P.at(k1, k2));
+          if (update)
+            delta.col(F_pair_coord[std::make_pair(k1, k2)]) = Dn_delta + std::log(P.at(k1, k2));
         }
       }
     // Compute log likelihood and pi
@@ -231,14 +237,20 @@ public:
           // given k1, k2 and q, density is a N-vector
           // in the end of the loop, the vector should populate a column of a slice of the tensor
           arma::vec Dn_delta = arma::zeros<arma::vec>(D.n_rows);
+          bool update = true;
           for (size_t qq = 0; qq < q.n_elem; qq++) {
+            if (k1 == k2 & qq > 0) {
+              update = false;
+              break;
+            }
             for (size_t j = 0; j < D.n_cols; j++) {
               arma::vec density = D.col(j);
               double m = (k2 < k1) ? q.at(qq) * F.at(k2, j) + (1 - q.at(qq)) * F.at(k1, j) : F.at(k1, j);
               Dn_delta += density.transform( [=](double x) { return (normal_pdf_log(x, m, s.at(j))); } );
             }
           }
-          delta_core.col(F_pair_coord[std::make_pair(k1, k2)]) = Dn_delta;
+          if (update)
+            delta_core.col(F_pair_coord[std::make_pair(k1, k2)]) = Dn_delta;
       }
     }
   }
@@ -260,13 +272,11 @@ public:
       // and take exp so that it goes to normal scale
       // see github issue 1 for details
       // a numeric trick is used to calculate log(sum(exp(x)))
-      double delta_n_max = std::max(delta_paired.slice(n).max(), delta_single.row(n).max());
-      delta_paired.slice(n) = arma::exp(delta_paired.slice(n) - delta_n_max);
-      delta_single.row(n) = arma::exp(delta_single.row(n) - delta_n_max);
-      double sum_delta_n = arma::accu(delta_paired.slice(n)) + arma::accu(delta_single.row(n));
+      double delta_n_max = delta.row(n).max();
+      delta.row(n) = arma::exp(delta.row(n) - delta_n_max);
+      double sum_delta_n = arma::accu(delta.row(n));
       logpost_vec.at(n) = std::log(sum_delta_n) + delta_n_max;
-      delta_paired.slice(n) = delta_paired.slice(n) / sum_delta_n;
-      delta_single.row(n) = delta_single.row(n) / sum_delta_n;
+      delta.row(n) = delta.row(n) / sum_delta_n;
     }
     loglik = arma::accu(logpost_vec);
   }
@@ -274,37 +284,17 @@ public:
   void update_variational_params() {
     // update Dirichlet parameters
     digamma_sum_alpha = 0;
-    digamma_sum_beta = 0;
     // update alpha
+    arma::vec tmp_vec = arma::sum(delta);
 #pragma omp parallel for num_threads(n_threads)
     for (size_t k1 = 0; k1 < P.n_rows; k1++) {
       for (size_t k2 = 0; k2 <= k1; k2++) {
-        double tmp = 0;
-        if (k2 < k1) {
-          arma::vec tmp_vec = arma::vectorise(arma::sum(arma::sum(delta_paired, 2), 0));
-          tmp = alpha0 + tmp_vec.at(F_pair_coord[std::make_pair(k1, k2)]);
-          alpha.at(k1, k2) = tmp;
-        } else {
-          arma::vec tmp_vec = arma::sum(delta_single, 1);
-          tmp = alpha0 + tmp_vec.at(F_pair_coord[std::make_pair(k1, k2)]);
-          alpha.at(k1, k2) = tmp;
-        }
+        double tmp = alpha0 + tmp_vec.at(F_pair_coord[std::make_pair(k1, k2)]);
+        alpha.at(k1, k2) = tmp;
         digamma_alpha.at(k1, k2) = digamma(tmp);
         digamma_sum_alpha += tmp;
       }
     }
-    // update beta
-#pragma omp parallel for num_threads(n_threads)
-    for (size_t qq = 0; qq < q.n_elem; qq++) {
-      arma::vec tmp_vec = arma::vectorise(arma::sum(arma::sum(delta_paired, 2), 1));
-      double tmp = beta0 + tmp_vec.at(qq);
-      beta.at(qq) = tmp;
-      digamma_beta.at(qq) = digamma(tmp);
-      digamma_sum_beta += tmp;
-    }
-    digamma_sum_alpha = digamma(digamma_sum_alpha);
-    digamma_sum_beta = digamma(digamma_sum_beta);
-
     // update posterior mean
     P = alpha / arma::accu(alpha);
   }
@@ -316,8 +306,6 @@ public:
         loglik += (alpha.at(k1, k2) - 1) * std::log(P.at(k1, k2));
       }
     }
-    // add prior part for membership grid weights
-    loglik += arma::accu((beta - 1) % arma::log(omega));
   }
 
   void update_LFS() {
