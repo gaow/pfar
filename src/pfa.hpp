@@ -172,16 +172,17 @@ public:
 	};
 };
 
+
 class PFA {
 public:
-  PFA(double * cX, double * cF, double * cP, double * cQ, double * omega,
+  PFA(double * cX, double * cF, double * cP, double * cQ,
       double * cLout, double * calphaout, double * cbetaout,
       int N, int J, int K, int C,
       double alpha0 = std::nan, double beta0 = std::nan):
     // mat(aux_mem*, n_rows, n_cols, copy_aux_mem = true, strict = true)
     D(cX, N, J, false, true), F(cF, K, J, false, true),
     P(cP, K, K, false, true), q(cQ, C, false, true),
-    omega(omega, C, false, true), L(cLout, N, K, false, true),
+    L(cLout, N, K, false, true),
     alpha(calphaout, K, K, false, true), beta(cbetaout, C, false, true),
     alpha0(alpha0), beta0(beta0)
   {
@@ -200,6 +201,20 @@ public:
     digamma_sum_beta = digamma(beta0 * q.n_elem);
     n_threads = 1;
     n_updates = 0;
+    avg_q = 0;
+    avg_1q = 0;
+    avg_q2 = 0;
+    avg_1q2 = 0;
+    avg_q1q = 0;
+    for (size_t i = 0; i < q.n_elem; i++) {
+      avg_q += q[i]; avg_1q += (1-q[i]); avg_q2 += q[i] * q[i];
+      avg_1q2 += (1-q[i]) * (1-q[i]); avg_q1q += q[i] * (1-q[i]);
+    }
+    avg_q /= double(q.n_elem);
+    avg_1q /= double(q.n_elem);
+    avg_q2 /= double(q.n_elem);
+    avg_1q2 /= double(q.n_elem);
+    avg_q1q /= double(q.n_elem);
     for (size_t k1 = 0; k1 < F.n_rows; k1++) {
       for (size_t k2 = 0; k2 <= k1; k2++) {
         // set factor pair coordinates to avoid
@@ -223,7 +238,6 @@ public:
     if (info == 0) {
       // D.print(out, "Data Matrix:");
       q.print(out, "Membership grids:");
-      omega.print(out, "Membership grid weight:");
     }
     if (info == 1) {
       F.print(out, "Factor matrix:");
@@ -246,28 +260,22 @@ public:
     n_threads = n;
   }
 
-  virtual int fit() {
-		throw RuntimeError("The base PFA class should not be called");
-		return 0;
-  }
-
-  virtual int update() {
-		throw RuntimeError("The base PFA class should not be called");
-		return 0;
-  }
-
 private:
   // N by J matrix of data
   arma::mat D;
-  // K by J matrix of factors
-  arma::mat F;
   // K by K matrix of factor pair frequencies
   arma::mat P;
+  // K by J matrix of factors
+  arma::mat F;
   // Q by 1 vector of membership grids
   arma::vec q;
-  // Q by 1 vector of membership grid weights
-  // we give a constant, uniform input as a computational device
-  arma::vec omega;
+  // We assume every grid has equal weight
+  // we need to use these quantities in the calculation
+  double avg_q; // \sum_q q / Q
+  double avg_1q; // \sum_q (1-q) / Q
+  double avg_q2; // \sum_q q^2 / Q
+  double avg_1q2; // \sum_q (1-q)^2 / Q
+  double avg_q1q; // \sum_q q(1-q) / Q
   // J by 1 vector of residual standard error
   arma::vec s;
   // N by K1K2 matrix
@@ -300,7 +308,6 @@ private:
 };
 
 
-
 class PFA_EM : public PFA
 {
 public:
@@ -311,17 +318,21 @@ public:
     return new PFA_EM(*this);
   }
 
-  void update_loglik();
-  void update_weights();
+  void update_ldelta();
+  void update_loglik_and_delta();
+  void update_paired_factor_weights();
   void update_LFS();
-  int fit () {
-    update_loglik();
-    update_weights();
+  int E_step() {
+    update_ldelta();
+    update_loglik_and_delta();
+    update_paired_factor_weights();
     return 0
   }
 
-  int update() {
-    update_LFS();
+  int M_step() {
+    update_factor_model();
+    update_residual_error();
+    n_updates += 1;
     return 0;
   }
 
