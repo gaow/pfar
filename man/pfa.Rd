@@ -21,7 +21,7 @@ the diagonal is single factor frequencies.}
 
 \item{priors}{[double, double] priors for edge weights and grid weights}
 
-\item{control}{\{tol = 1E-5, maxiter = 10000, logfile = NULL, n_cpu = 1\} list of runtime variables}
+\item{control}{\{tol = 1E-5, maxiter = 10000, logfile = NULL, n_cpu = 4\} list of runtime variables}
 }
 \value{
 A list with elements below:

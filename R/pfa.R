@@ -7,7 +7,7 @@
 #' the diagonal is single factor frequencies.
 #' @param q [C, 1] / [int] defines initial vector of possible membership loadings, a discrete set
 #' @param priors [double, double] priors for edge weights and grid weights
-#' @param control \{tol = 1E-5, maxiter = 10000, logfile = NULL, n_cpu = 1\} list of runtime variables
+#' @param control \{tol = 1E-5, maxiter = 10000, logfile = NULL, n_cpu = 4\} list of runtime variables
 #' @return A list with elements below:
 #' \item{F}{...}
 #' \item{L}{...}
@@ -77,7 +77,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, priors = NULL,
   }
   n_cpu <- as.integer(control$n_cpu)
   if (length(n_cpu) == 0 || n_cpu <= 0) {
-    n_cpu <- 1
+    n_cpu <- 4
   }
   logfile <- control$logfile
   if (is.null(logfile)) {
