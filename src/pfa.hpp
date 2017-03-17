@@ -4,6 +4,7 @@
 
 #include <armadillo>
 #include <map>
+#include <string>
 #include <omp.h>
 
 static const double INV_SQRT_2PI = 0.3989422804014327;
@@ -105,7 +106,7 @@ class Exception
 public:
 	/// constructor
 	/// \param msg error message
-	Exception(const string & msg) : m_msg(msg)
+	Exception(const std::string & msg) : m_msg(msg)
 	{
 	}
 
@@ -123,14 +124,14 @@ public:
 
 private:
 	/// error message
-	string m_msg;
+  std::string m_msg;
 };
 
 /// exception, thrown if out of memory
 class StopIteration : public Exception
 {
 public:
-	StopIteration(const string msg) : Exception(msg)
+	StopIteration(const std::string msg) : Exception(msg)
 	{
 	};
 };
@@ -140,7 +141,7 @@ public:
 class IndexError : public Exception
 {
 public:
-	IndexError(const string msg) : Exception(msg)
+	IndexError(const std::string msg) : Exception(msg)
 	{
 	};
 };
@@ -149,7 +150,7 @@ public:
 class ValueError : public Exception
 {
 public:
-	ValueError(const string msg) : Exception(msg)
+	ValueError(const std::string msg) : Exception(msg)
 	{
 	};
 };
@@ -158,7 +159,7 @@ public:
 class SystemError : public Exception
 {
 public:
-	SystemError(const string msg) : Exception(msg)
+	SystemError(const std::string msg) : Exception(msg)
 	{
 	};
 };
@@ -167,7 +168,7 @@ public:
 class RuntimeError : public Exception
 {
 public:
-	RuntimeError(const string msg) : Exception(msg)
+	RuntimeError(const std::string msg) : Exception(msg)
 	{
 	};
 };
@@ -245,7 +246,7 @@ public:
     n_threads = n;
   }
 
-private:
+protected:
   // N by J matrix of data
   arma::mat D;
   // K by K matrix of factor pair frequencies
@@ -282,8 +283,9 @@ private:
 class PFA_EM : public PFA
 {
 public:
-  PFA_EM() : PFA(double * cX, double * cF, double * cP, double * cQ,
-                 double * cLout, int N, int J, int K, int C) {}
+  PFA_EM(double * cX, double * cF, double * cP, double * cQ,
+         double * cLout, int N, int J, int K, int C) : PFA(cX, cF, cP, cQ, cLout,
+                                                           N, J, K, C) {}
 
   PFA * clone() const {
     return new PFA_EM(*this);
@@ -298,7 +300,7 @@ public:
     update_ldelta();
     update_loglik_and_delta();
     update_paired_factor_weights();
-    return 0
+    return 0;
   }
 
   int M_step() {
