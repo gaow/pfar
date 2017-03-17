@@ -135,3 +135,141 @@ int pfa_em(double * X, double * F, double * P, double * q, double * omega,
 	}
 	return 0;
 }
+
+void PFA_EM::update_loglik() {
+  // this computes loglik and delta
+  // this results in a N by k1k2 matrix of loglik
+  // and a N by k1k2 matrix of delta
+#pragma omp parallel for num_threads(n_threads)
+  for (size_t k1 = 0; k1 < F.n_rows; k1++) {
+    for (size_t k2 = 0; k2 <= k1; k2++) {
+      // given k1, k2 and q, density is a N-vector
+      // in the end of the loop, the vector should populate a column of a slice of the tensor
+      arma::vec Dn_delta = arma::zeros<arma::vec>(D.n_rows);
+      bool update = true
+      for (size_t qq = 0; qq < q.n_elem; qq++) {
+        if (k1 == k2 & qq > 0) {
+          update = false;
+          break;
+        }
+        for (size_t j = 0; j < D.n_cols; j++) {
+          arma::vec density = D.col(j);
+          double m = (k2 < k1) ? q.at(qq) * F.at(k2, j) + (1 - q.at(qq)) * F.at(k1, j) : F.at(k1, j);
+          Dn_delta += density.transform( [=](double x) { return (normal_pdf_log(x, m, s.at(j))); } );
+        }
+      }
+      if (update)
+        delta.col(F_pair_coord[std::make_pair(k1, k2)]) = Dn_delta + std::log(P.at(k1, k2));
+   }
+  }
+  // Compute log likelihood and pi
+  arma::vec loglik_vec;
+  loglik_vec.set_size(D.n_rows);
+#pragma omp parallel for num_threads(n_threads)
+  for (size_t n = 0; n < D.n_rows; n++) {
+    // scale delta to avoid very small likelihood driving the product to zero
+    // and take exp so that it goes to normal scale
+    // see github issue 1 for details
+    // a numeric trick is used to calculate log(sum(exp(x)))
+    double delta_n_max = delta.row(n).max();
+    delta.row(n) = arma::exp(delta.row(n) - delta_n_max);
+    double sum_delta_n = arma::accu(delta.row(n));
+    loglik_vec.at(n) = std::log(sum_delta_n) + delta_n_max;
+    delta.row(n) = delta.row(n) / sum_delta_n;
+  }
+  loglik = arma::accu(loglik_vec);
+}
+
+void PFA_EM::update_weights() {
+  // update factor weights
+  arma::vec pik1k2 = delta.mean();
+#pragma omp parallel for num_threads(n_threads)
+  for (size_t k1 = 0; k1 < P.n_rows; k1++) {
+    for (size_t k2 = 0; k2 <= k1; k2++) {
+      P.at(k1, k2) = pik1k2.at(F_pair_coord[std::make_pair(k1, k2)]);
+    }
+  }
+}
+
+void PFA_EM::update_LFS() {
+  // Factors F and loadings L are to be updated here
+  // Need to compute 2 matrices in order to solve F
+  // S is the residual standard error vector to be updated for each feature
+  L.fill(0);
+  arma::mat L2 = L;
+  arma::mat cum_delta_paired = arma::sum(delta_paired, 2);
+#pragma omp parallel for num_threads(n_threads) collapse(2)
+  for (size_t k = 0; k < F.n_rows; k++) {
+    // I. First we compute the k-th column for E(L), the N X K matrix:
+    // generate the proper input for N X C %*% C X 1
+    // where the N X C matrix is taken from delta given K1K2
+    // and the C X 1 matrix correspond to the grid of q
+    // II. Then we compute the diagonal elements for E(W), the K X K matrix
+    // First we still compute a N X K matrix like above but replacing q / 1 - q with q^2 / (1 - q)^2
+    // then take colsum to get the K vector as the diagonal
+    //
+    // 0. (prepare)
+    for (size_t i = 0; i < F.n_rows; i++) {
+      // create the LHS Dk1k2, N X C matrix from delta given k1, k2
+      arma::mat Dk1k2(D.n_rows, q.n_elem, arma::fill::zeros);
+      for (size_t n = 0; n < D.n_rows; n++) {
+        Dk1k2.row(n) = delta_paired.slice(n).row(F_pair_coord[std::make_pair(k, i)]);
+      }
+#pragma omp critical
+      {
+      if (k < i) {
+        // I.
+        L.col(k) += Dk1k2 * q;
+        // II.
+        L2.col(k) += Dk1k2 * (q % q);
+      }
+      if (k > i) {
+        L.col(k) += Dk1k2 * (1 - q);
+        L2.col(k) += Dk1k2 * ((1 - q) % (1 - q));
+      }
+      if (k == i) {
+        L.col(k) += delta_single.col(k);
+        L2.col(k) += delta_single.col(k);
+      }
+      }
+    }
+  }
+  // II. diagonal elements for E(W)
+  W.diag() = arma::sum(L2);
+  // III. Now we compute off-diagonal elements for E(W), the K X K matrix
+  // it involves on the LHS a vector of [q1(1-q1), q2(1-q2) ...]
+  // and on the RHS for each pair of (k1, k2) the corresponding row from pi_mat
+  arma::vec LHS = q % (1 - q);
+#pragma omp parallel for num_threads(n_threads)
+  for (size_t k1 = 0; k1 < F.n_rows; k1++) {
+    for (size_t k2 = 0; k2 < k1; k2++) {
+      arma::vec RHS = arma::vectorise(cum_delta_paired.row(F_pair_coord[std::make_pair(k1, k2)]));
+      W.at(k1, k2) = arma::dot(LHS, RHS);
+      W.at(k2, k1) = W.at(k1, k2);
+    }
+  }
+  // IV. Finally we compute F
+  F = arma::solve(W, L.t() * D);
+  // V. ... and update s
+#pragma omp parallel for num_threads(n_threads)
+  // FIXME: can this be optimized? perhaps hard unless we re-design data structure
+  for (size_t j = 0; j < D.n_cols; j++) {
+    s.at(j) = 0;
+    for (size_t qq = 0; qq < q.n_elem; qq++) {
+      for (size_t k1 = 0; k1 < F.n_rows; k1++) {
+        for (size_t k2 = 0; k2 <= k1; k2++) {
+          if (k2 < k1) {
+            for (size_t n = 0; n < D.n_rows; n++) {
+              s.at(j) += delta_paired.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], qq) * std::pow(D.at(n, j) - q.at(qq) * F.at(k2, j) - (1 - q.at(qq)) * F.at(k1, j), 2);
+            }
+          } else {
+            s.at(j) += arma::accu(delta_single.col(k1) % arma::pow(D.col(j) - F.at(k1, j), 2));
+          }
+        }
+      }
+    }
+    s.at(j) = std::sqrt(s.at(j) / double(D.n_rows));
+  }
+  // keep track of iterations
+  n_updates += 1;
+}
