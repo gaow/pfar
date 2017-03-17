@@ -181,29 +181,16 @@ extern "C" int pfa_em(double *, double *, double *, double *,
 class PFA {
 public:
   PFA(double * cX, double * cF, double * cP, double * cQ,
-      double * cLout, double * calphaout, double * cbetaout,
-      int N, int J, int K, int C,
-      double alpha0 = std::nan, double beta0 = std::nan):
+      double * cLout, int N, int J, int K, int C):
     // mat(aux_mem*, n_rows, n_cols, copy_aux_mem = true, strict = true)
     D(cX, N, J, false, true), F(cF, K, J, false, true),
     P(cP, K, K, false, true), q(cQ, C, false, true),
-    L(cLout, N, K, false, true),
-    alpha(calphaout, K, K, false, true), beta(cbetaout, C, false, true),
-    alpha0(alpha0), beta0(beta0)
+    L(cLout, N, K, false, true)
   {
     // initialize residual sd with sample sd
     s = arma::vectorise(arma::stddev(D));
     W.set_size(F.n_rows, F.n_rows);
     delta.set_size(D.n_rows, int((F.n_rows + 1) * F.n_rows / 2));
-    delta_core.set_size(D.n_rows, int((F.n_rows + 1) * F.n_rows / 2));
-    digamma_alpha.set_size(P.n_rows, P.n_rows);
-    digamma_alpha.zeros();
-    alpha.zeros();
-    beta.zeros();
-    digamma_beta.set_size(q.n_elem);
-    digamma_beta.fill(digamma(beta0));
-    digamma_sum_alpha = digamma(alpha0 * (P.n_rows + 1) * P.n_rows / 2);
-    digamma_sum_beta = digamma(beta0 * q.n_elem);
     n_threads = 1;
     n_updates = 0;
     avg_q = 0;
@@ -228,7 +215,6 @@ public:
         size_t k1k2 = size_t(k1 * (k1 - 1) / 2 + k2);
         F_pair_coord[std::make_pair(k1, k2)] = k1k2;
         F_pair_coord[std::make_pair(k2, k1)] = k1k2;
-        digamma_alpha.at(k1, k2) = digamma(alpha0);
       }
     }
   }
@@ -250,12 +236,6 @@ public:
       L.print(out, "Loading matrix:");
     }
     if (info == 2) {
-      if (n_updates > 1) {
-        if (variational) {
-          alpha.print(out, "Dirichlet posterior parameter for factor pairs:");
-          beta.print(out, "Dirichlet posterior parameter for membership grid weights");
-        }
-      }
       // W.print(out, "E[L'L] matrix:");
       s.print(out, "Residual standard deviation of data columns:");
     }
@@ -285,7 +265,6 @@ private:
   arma::vec s;
   // N by K1K2 matrix
   arma::mat delta;
-  arma::mat delta_core;
   std::map<std::pair<size_t, size_t>, size_t> F_pair_coord;
   // N by K matrix of loadings
   arma::mat L;
@@ -297,28 +276,15 @@ private:
   int n_threads;
   // updates on the model
   int n_updates;
-  // Dirichlet priors for factors and grids
-  double alpha0;
-  double beta0;
-  // K by K matrix of digamma of variational parameter for factor pair frequencies
-  arma::mat digamma_alpha;
-  arma::mat alpha;
-  // Q by 1 vector of digamma of variational parameter for membership grids
-  arma::vec digamma_beta;
-  arma::vec beta;
-  double digamma_sum_alpha;
-  double digamma_sum_beta;
-  // whether or not to use variational version
-  bool variational;
 };
 
 
 class PFA_EM : public PFA
 {
 public:
-  PFA_EM() : PFA(double * cX, double * cF, double * cP, double * cQ, double * omega,
-                 double * cLout, double * calphaout, double * cbetaout,
-                 int N, int J, int K, int C), variational(false) {}
+  PFA_EM() : PFA(double * cX, double * cF, double * cP, double * cQ,
+                 double * cLout, int N, int J, int K, int C) {}
+
   PFA * clone() const {
     return new PFA_EM(*this);
   }
@@ -326,7 +292,8 @@ public:
   void update_ldelta();
   void update_loglik_and_delta();
   void update_paired_factor_weights();
-  void update_LFS();
+  void update_factor_model();
+  void update_residual_error();
   int E_step() {
     update_ldelta();
     update_loglik_and_delta();

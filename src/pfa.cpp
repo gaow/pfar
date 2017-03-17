@@ -67,7 +67,7 @@ int pfa_em(double * X, double * F, double * P, double * q,
 	// Fit model
 	//
 	*niter = 0;
-	PFA_EM model(X, F, P, q, L, alpha, beta, *N, *J, *K, *C, *alpha0, *beta0);
+	PFA_EM model(X, F, P, q, L, *N, *J, *K, *C);
 	model.set_threads(*n_threads);
 	model.write(f1, 0);
 	while (*niter <= *maxiter) {
