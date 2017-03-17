@@ -172,6 +172,11 @@ public:
 	};
 };
 
+extern "C" int pfa_em(double *, double *, double *, double *,
+                      int *, int *, int *, int *, double *, double *,
+                      double *, int *, int *,
+                      double *, double *, double *, double *,
+                      int *, int *, int *, int *, int *, int *);
 
 class PFA {
 public:

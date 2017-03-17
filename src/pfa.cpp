@@ -30,12 +30,6 @@
 // @param nlf_2 [int_pt] length of above
 // @param n_threads [int_pt] number of threads for parallel processing
 
-extern "C" int pfa_em(double *, double *, double *, double *,
-                      int *, int *, int *, int *, double *, double *,
-                      double *, int *, int *,
-                      double *, double *, double *, double *,
-                      int *, int *, int *, int *, int *, int *);
-
 int pfa_em(double * X, double * F, double * P, double * q,
            int * N, int * J, int * K, int * C, double * alpha0, double * beta0,
            double * tol, int * maxiter, int * niter,
@@ -70,12 +64,11 @@ int pfa_em(double * X, double * F, double * P, double * q,
 		f2.open(f2_log, std::fstream::app);
 	}
 	//
-	// Fit model via EM
+	// Fit model
 	//
 	*niter = 0;
-	PFA model(X, F, P, q, L, alpha, beta, *N, *J, *K, *C, *alpha0, *beta0);
+	PFA_EM model(X, F, P, q, L, alpha, beta, *N, *J, *K, *C, *alpha0, *beta0);
 	model.set_threads(*n_threads);
-  model.set_variational();
 	model.write(f1, 0);
 	while (*niter <= *maxiter) {
 		if (keeplog) {
@@ -88,9 +81,9 @@ int pfa_em(double * X, double * F, double * P, double * q,
 			f2 << "#----------------------------------\n";
 			model.write(f2, 2);
 		}
-		int variational_status = model.E_step();
-    if (variational_status != 0) {
-      std::cerr << "[ERROR] variational inference procedure failed!" << std::endl;
+		int e_status = model.E_step();
+    if (e_status != 0) {
+      std::cerr << "[ERROR] E step failed!" << std::endl;
       *status = 1;
 			break;
     }
@@ -126,7 +119,7 @@ int pfa_em(double * X, double * F, double * P, double * q,
 		model.M_step();
 	}
 	if (*status)
-		std::cerr << "[WARNING] EM algorithm failed to converge after " << *niter << " iterations!" <<
+		std::cerr << "[WARNING] PFA failed to converge after " << *niter << " iterations!" <<
 		std::endl;
 	if (keeplog) {
 		f1.close();
