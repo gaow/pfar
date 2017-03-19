@@ -1,27 +1,26 @@
 // Gao Wang and Kushal K. Dey (c) 2016
+// code format configuration: clang-format -style=Google -dump-config >
+// ~/.clang-format
 #ifndef _PFA_HPP
 #define _PFA_HPP
 
+#include <omp.h>
 #include <armadillo>
 #include <map>
 #include <string>
-#include <omp.h>
 
 static const double INV_SQRT_2PI = 0.3989422804014327;
 static const double INV_SQRT_2PI_LOG = -0.91893853320467267;
 
-inline double normal_pdf(double x, double m, double sd)
-{
+inline double normal_pdf(double x, double m, double sd) {
   double a = (x - m) / sd;
   return INV_SQRT_2PI / sd * std::exp(-0.5 * a * a);
 };
 
-inline double normal_pdf_log(double x, double m, double sd)
-{
+inline double normal_pdf_log(double x, double m, double sd) {
   double a = (x - m) / sd;
-  return INV_SQRT_2PI_LOG - std::log(sd) -0.5 * a * a;
+  return INV_SQRT_2PI_LOG - std::log(sd) - 0.5 * a * a;
 };
-
 
 /* The digamma function is the derivative of gammaln.
    Reference:
@@ -33,161 +32,129 @@ inline double normal_pdf_log(double x, double m, double sd)
     From http://www.psc.edu/~burkardt/src/dirichlet/dirichlet.f
     (with modifications for negative numbers and extra precision)
 */
-inline double digamma(double x)
-{
-    double neginf = -INFINITY;
-    static const double c = 12,
-            digamma1 = -0.57721566490153286,
-            trigamma1 = 1.6449340668482264365, /* pi^2/6 */
-            s = 1e-6,
-            s3 = 1./12,
-            s4 = 1./120,
-            s5 = 1./252,
-            s6 = 1./240,
-            s7 = 1./132,
-            s8 = 691./32760,
-            s9 = 1./12,
-            s10 = 3617./8160;
-    double result;
-    /* Illegal arguments */
-    if((x == neginf) || std::isnan(x)) {
-        return NAN;
-    }
-    /* Singularities */
-    if((x <= 0) && (floor(x) == x)) {
-        return neginf;
-    }
-    /* Negative values */
-    /* Use the reflection formula (Jeffrey 11.1.6):
-   * digamma(-x) = digamma(x+1) + pi*cot(pi*x)
-   *
-   * This is related to the identity
-   * digamma(-x) = digamma(x+1) - digamma(z) + digamma(1-z)
-   * where z is the fractional part of x
-   * For example:
-   * digamma(-3.1) = 1/3.1 + 1/2.1 + 1/1.1 + 1/0.1 + digamma(1-0.1)
-   *               = digamma(4.1) - digamma(0.1) + digamma(1-0.1)
-   * Then we use
-   * digamma(1-z) - digamma(z) = pi*cot(pi*z)
-   */
-    if(x < 0) {
-        return digamma(1-x) + M_PI/tan(-M_PI*x);
-    }
-    /* Use Taylor series if argument <= S */
-    if(x <= s) return digamma1 - 1/x + trigamma1*x;
-    /* Reduce to digamma(X + N) where (X + N) >= C */
-    result = 0;
-    while(x < c) {
-        result -= 1/x;
-        x++;
-    }
-    /* Use de Moivre's expansion if argument >= C */
-    /* This expansion can be computed in Maple via asympt(Psi(x),x) */
-    if(x >= c) {
-        double r = 1/x, t;
-        result += log(x) - 0.5*r;
-        r *= r;
+inline double digamma(double x) {
+  double neginf = -INFINITY;
+  static const double c = 12, digamma1 = -0.57721566490153286,
+                      trigamma1 = 1.6449340668482264365, /* pi^2/6 */
+      s = 1e-6, s3 = 1. / 12, s4 = 1. / 120, s5 = 1. / 252, s6 = 1. / 240,
+                      s7 = 1. / 132, s8 = 691. / 32760, s9 = 1. / 12,
+                      s10 = 3617. / 8160;
+  double result;
+  /* Illegal arguments */
+  if ((x == neginf) || std::isnan(x)) {
+    return NAN;
+  }
+  /* Singularities */
+  if ((x <= 0) && (floor(x) == x)) {
+    return neginf;
+  }
+  /* Negative values */
+  /* Use the reflection formula (Jeffrey 11.1.6):
+ * digamma(-x) = digamma(x+1) + pi*cot(pi*x)
+ *
+ * This is related to the identity
+ * digamma(-x) = digamma(x+1) - digamma(z) + digamma(1-z)
+ * where z is the fractional part of x
+ * For example:
+ * digamma(-3.1) = 1/3.1 + 1/2.1 + 1/1.1 + 1/0.1 + digamma(1-0.1)
+ *               = digamma(4.1) - digamma(0.1) + digamma(1-0.1)
+ * Then we use
+ * digamma(1-z) - digamma(z) = pi*cot(pi*z)
+ */
+  if (x < 0) {
+    return digamma(1 - x) + M_PI / tan(-M_PI * x);
+  }
+  /* Use Taylor series if argument <= S */
+  if (x <= s) return digamma1 - 1 / x + trigamma1 * x;
+  /* Reduce to digamma(X + N) where (X + N) >= C */
+  result = 0;
+  while (x < c) {
+    result -= 1 / x;
+    x++;
+  }
+  /* Use de Moivre's expansion if argument >= C */
+  /* This expansion can be computed in Maple via asympt(Psi(x),x) */
+  if (x >= c) {
+    double r = 1 / x, t;
+    result += log(x) - 0.5 * r;
+    r *= r;
 #if 1
-        result -= r * (s3 - r * (s4 - r * (s5 - r * (s6 - r * s7))));
+    result -= r * (s3 - r * (s4 - r * (s5 - r * (s6 - r * s7))));
 #else
-        /* this version for lame compilers */
-        t = (s5 - r * (s6 - r * s7));
-        result -= r * (s3 - r * (s4 - r * t));
+    /* this version for lame compilers */
+    t = (s5 - r * (s6 - r * s7));
+    result -= r * (s3 - r * (s4 - r * t));
 #endif
-    }
-    return result;
+  }
+  return result;
 }
 
 template <typename T>
-void print(const T& e) { std::cout << e << std::endl; }
+void print(const T &e) {
+  std::cout << e << std::endl;
+}
 
-class Exception
-{
-public:
-	/// constructor
-	/// \param msg error message
-	Exception(const std::string & msg) : m_msg(msg)
-	{
-	}
+class Exception {
+ public:
+  /// constructor
+  /// \param msg error message
+  Exception(const std::string &msg) : m_msg(msg) {}
 
+  /// return error message
+  const char *message() { return m_msg.c_str(); }
 
-	/// return error message
-	const char * message()
-	{
-		return m_msg.c_str();
-	}
+  virtual ~Exception(){};
 
-
-	virtual ~Exception()
-	{
-	};
-
-private:
-	/// error message
+ private:
+  /// error message
   std::string m_msg;
 };
 
 /// exception, thrown if out of memory
-class StopIteration : public Exception
-{
-public:
-	StopIteration(const std::string msg) : Exception(msg)
-	{
-	};
+class StopIteration : public Exception {
+ public:
+  StopIteration(const std::string msg) : Exception(msg){};
 };
 
-
 /// exception, thrown if index out of range
-class IndexError : public Exception
-{
-public:
-	IndexError(const std::string msg) : Exception(msg)
-	{
-	};
+class IndexError : public Exception {
+ public:
+  IndexError(const std::string msg) : Exception(msg){};
 };
 
 /// exception, thrown if value of range etc
-class ValueError : public Exception
-{
-public:
-	ValueError(const std::string msg) : Exception(msg)
-	{
-	};
+class ValueError : public Exception {
+ public:
+  ValueError(const std::string msg) : Exception(msg){};
 };
 
 /// exception, thrown if system error occurs
-class SystemError : public Exception
-{
-public:
-	SystemError(const std::string msg) : Exception(msg)
-	{
-	};
+class SystemError : public Exception {
+ public:
+  SystemError(const std::string msg) : Exception(msg){};
 };
 
 /// exception, thrown if a runtime error occurs
-class RuntimeError : public Exception
-{
-public:
-	RuntimeError(const std::string msg) : Exception(msg)
-	{
-	};
+class RuntimeError : public Exception {
+ public:
+  RuntimeError(const std::string msg) : Exception(msg){};
 };
 
-extern "C" int pfa_em(double *, double *, double *, double *,
-                      int *, int *, int *, int *, double *, double *,
-                      double *, int *, int *,
-                      double *, double *, double *, double *,
-                      int *, int *, int *, int *, int *, int *);
+extern "C" int pfa_em(double *, double *, double *, double *, int *, int *,
+                      int *, int *, double *, double *, double *, int *, int *,
+                      double *, double *, double *, double *, int *, int *,
+                      int *, int *, int *, int *);
 
 class PFA {
-public:
-  PFA(double * cX, double * cF, double * cP, double * cQ,
-      double * cLout, int N, int J, int K, int C):
-    // mat(aux_mem*, n_rows, n_cols, copy_aux_mem = true, strict = true)
-    D(cX, N, J, false, true), F(cF, K, J, false, true),
-    P(cP, K, K, false, true), q(cQ, C, false, true),
-    L(cLout, N, K, false, true)
-  {
+ public:
+  PFA(double *cX, double *cF, double *cP, double *cQ, double *cLout, int N,
+      int J, int K, int C)
+      :  // mat(aux_mem*, n_rows, n_cols, copy_aux_mem = true, strict = true)
+        D(cX, N, J, false, true),
+        F(cF, K, J, false, true),
+        P(cP, K, K, false, true),
+        q(cQ, C, false, true),
+        L(cLout, N, K, false, true) {
     // initialize residual sd with sample sd
     s = arma::vectorise(arma::stddev(D));
     W.set_size(F.n_rows, F.n_rows);
@@ -200,8 +167,11 @@ public:
     avg_1q2 = 0;
     avg_q1q = 0;
     for (size_t i = 0; i < q.n_elem; i++) {
-      avg_q += q[i]; avg_1q += (1-q[i]); avg_q2 += q[i] * q[i];
-      avg_1q2 += (1-q[i]) * (1-q[i]); avg_q1q += q[i] * (1-q[i]);
+      avg_q += q[i];
+      avg_1q += (1 - q[i]);
+      avg_q2 += q[i] * q[i];
+      avg_1q2 += (1 - q[i]) * (1 - q[i]);
+      avg_q1q += q[i] * (1 - q[i]);
     }
     avg_q /= double(q.n_elem);
     avg_1q /= double(q.n_elem);
@@ -221,12 +191,9 @@ public:
   }
   virtual ~PFA() {}
 
-	virtual PFA * clone() const
-	{
-		return new PFA(*this);
-	}
+  virtual PFA *clone() const { return new PFA(*this); }
 
-  void write(std::ostream& out, int info) {
+  void write(std::ostream &out, int info) {
     if (info == 0) {
       // D.print(out, "Data Matrix:");
       q.print(out, "Membership grids:");
@@ -247,11 +214,9 @@ public:
     }
   }
 
-  void set_threads(int n) {
-    n_threads = n;
-  }
+  void set_threads(int n) { n_threads = n; }
 
-protected:
+ protected:
   // N by J matrix of data
   arma::mat D;
   // K by K matrix of factor pair frequencies
@@ -262,11 +227,11 @@ protected:
   arma::vec q;
   // We assume every grid has equal weight
   // we need to use these quantities in the calculation
-  double avg_q; // \sum_q q / Q
-  double avg_1q; // \sum_q (1-q) / Q
-  double avg_q2; // \sum_q q^2 / Q
-  double avg_1q2; // \sum_q (1-q)^2 / Q
-  double avg_q1q; // \sum_q q(1-q) / Q
+  double avg_q;    // \sum_q q / Q
+  double avg_1q;   // \sum_q (1-q) / Q
+  double avg_q2;   // \sum_q q^2 / Q
+  double avg_1q2;  // \sum_q (1-q)^2 / Q
+  double avg_q1q;  // \sum_q q(1-q) / Q
   // J by 1 vector of residual standard error
   arma::vec s;
   // N by K1K2 matrix
@@ -284,17 +249,13 @@ protected:
   int n_updates;
 };
 
+class PFA_EM : public PFA {
+ public:
+  PFA_EM(double *cX, double *cF, double *cP, double *cQ, double *cLout, int N,
+         int J, int K, int C)
+      : PFA(cX, cF, cP, cQ, cLout, N, J, K, C) {}
 
-class PFA_EM : public PFA
-{
-public:
-  PFA_EM(double * cX, double * cF, double * cP, double * cQ,
-         double * cLout, int N, int J, int K, int C) : PFA(cX, cF, cP, cQ, cLout,
-                                                           N, J, K, C) {}
-
-  PFA * clone() const {
-    return new PFA_EM(*this);
-  }
+  PFA *clone() const { return new PFA_EM(*this); }
 
   void update_ldelta();
   void update_loglik_and_delta();
@@ -315,8 +276,6 @@ public:
     return 0;
   }
 
-  double get_loglik() {
-    return loglik;
-  }
+  double get_loglik() { return loglik; }
 };
 #endif
