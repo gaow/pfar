@@ -146,7 +146,7 @@ void PFA_EM::update_ldelta() {
         }
       }
       delta.col(F_pair_coord[std::make_pair(k1, k2)]) = Dn_delta + std::log(P.at(k1, k2));
-   }
+    }
   }
 }
 

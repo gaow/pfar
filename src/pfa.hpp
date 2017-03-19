@@ -213,7 +213,7 @@ public:
         // set factor pair coordinates to avoid
         // having to compute it at each iteration
         // (b + 1) * b / 2 - (b - a)
-        size_t k1k2 = size_t(k1 * (k1 - 1) / 2 + k2);
+        size_t k1k2 = size_t(k1 * (k1 + 1) / 2 + k2);
         F_pair_coord[std::make_pair(k1, k2)] = k1k2;
         F_pair_coord[std::make_pair(k2, k1)] = k1k2;
       }
@@ -233,14 +233,17 @@ public:
     }
     if (info == 1) {
       F.print(out, "Factor matrix:");
+      P.print(out, "Factor frequency matrix:");
       if (n_updates > 0) {
-        P.print(out, "Factor frequency matrix:");
         L.print(out, "Loading matrix:");
       }
     }
     if (info == 2) {
       // W.print(out, "E[L'L] matrix:");
       s.print(out, "Residual standard deviation of data columns:");
+      if (n_updates > 0) {
+        delta.print(out, "delta matrix");
+      }
     }
   }
 
