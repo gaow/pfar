@@ -7,7 +7,7 @@
 #' the diagonal is single factor frequencies.
 #' @param q [C, 1] / [int] defines initial vector of possible membership loadings, a discrete set
 #' @param priors [double, double] priors for edge weights and grid weights
-#' @param control \{tol = 1E-5, maxiter = 10000, logfile = NULL, n_cpu = 4\} list of runtime variables
+#' @param control \{tol = 1E-5, maxiter = 10000, logfile = NULL, n_cpu = 4, verbose = FALSE \} list of runtime variables
 #' @return A list with elements below:
 #' \item{F}{...}
 #' \item{L}{...}
@@ -86,7 +86,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, priors = NULL,
     f1 <- charToRaw(paste(logfile, "updates.log", sep = "."))
     f2 <- charToRaw(paste(logfile, "debug.log", sep = "."))
     n_f1 <- length(f1)
-    n_f2 <- length(f2)
+    n_f2 <- ifelse(is.null(control$verbose) || control$verbose == FALSE, 0, length(f2))
   }
   ## sanity check
   stopifnot(nrow(F) == K)

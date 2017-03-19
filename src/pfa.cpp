@@ -39,29 +39,31 @@ int pfa_em(double * X, double * F, double * P, double * q,
 	//
 	// Set up logfiles
 	//
-	bool keeplog = (*nlf_1 > 0) ? true : false;
 	std::fstream f1;
 	std::fstream f2;
-
-	if (keeplog) {
+	if (*nlf_1 > 0) {
 		char f1_log[(*nlf_1) + 1];
 		char f2_log[(*nlf_2) + 1];
 		for (int i = 0; i < *nlf_1; i++)
 			f1_log[i] = (char)*(logfn_1 + i);
-		for (int i = 0; i < *nlf_2; i++)
-			f2_log[i] = (char)*(logfn_2 + i);
+    for (int i = 0; i < *nlf_2; i++)
+      f2_log[i] = (char)*(logfn_2 + i);
 		f1_log[*nlf_1] = '\0';
 		f2_log[*nlf_2] = '\0';
+    // log file
 		f1.open(f1_log, std::fstream::out);
-		f2.open(f2_log, std::fstream::out);
 		time_t now;
 		time(&now);
 		f1 << "#\n# " << asctime(localtime(&now)) << "#\n\n";
-		f2 << "#\n# " << asctime(localtime(&now)) << "#\n\n";
 		f1.close();
-		f2.close();
 		f1.open(f1_log, std::fstream::app);
-		f2.open(f2_log, std::fstream::app);
+    // debug file
+    if (*nlf_2 > 0) {
+      f2.open(f2_log, std::fstream::out);
+      f2 << "#\n# " << asctime(localtime(&now)) << "#\n\n";
+      f2.close();
+      f2.open(f2_log, std::fstream::app);
+    }
 	}
 	//
 	// Fit model
@@ -71,15 +73,17 @@ int pfa_em(double * X, double * F, double * P, double * q,
 	model.set_threads(*n_threads);
 	model.write(f1, 0);
 	while (*niter <= *maxiter) {
-		if (keeplog) {
+		if (f1.is_open()) {
 			f1 << "#----------------------------------\n";
 			f1 << "# Iteration " << *niter << "\n";
 			f1 << "#----------------------------------\n";
 			model.write(f1, 1);
-			f2 << "#----------------------------------\n";
-			f2 << "# Iteration " << *niter << "\n";
-			f2 << "#----------------------------------\n";
-			model.write(f2, 2);
+      if (f2.is_open()) {
+        f2 << "#----------------------------------\n";
+        f2 << "# Iteration " << *niter << "\n";
+        f2 << "#----------------------------------\n";
+        model.write(f2, 2);
+      }
 		}
 		int e_status = model.E_step();
     if (e_status != 0) {
@@ -93,7 +97,7 @@ int pfa_em(double * X, double * F, double * P, double * q,
 			*status = 1;
 			break;
     }
-		if (keeplog) {
+		if (f1.is_open()) {
 			f1 << "Loglik:\t" << loglik[*niter] << "\n";
 		}
 		(*niter)++;
@@ -121,14 +125,14 @@ int pfa_em(double * X, double * F, double * P, double * q,
 	if (*status)
 		std::cerr << "[WARNING] PFA failed to converge after " << *niter << " iterations!" <<
 		std::endl;
-	if (keeplog) {
+	if (f1.is_open())
 		f1.close();
+	if (f2.is_open())
 		f2.close();
-	}
 	return 0;
 }
 
-// this computes delta
+// this computes log delta
 // return: N by k1k2 matrix of log delta
 void PFA_EM::update_ldelta() {
 #pragma omp parallel for num_threads(n_threads)

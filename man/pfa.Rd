@@ -21,7 +21,7 @@ the diagonal is single factor frequencies.}
 
 \item{priors}{[double, double] priors for edge weights and grid weights}
 
-\item{control}{\{tol = 1E-5, maxiter = 10000, logfile = NULL, n_cpu = 4\} list of runtime variables}
+\item{control}{\{tol = 1E-5, maxiter = 10000, logfile = NULL, n_cpu = 4, verbose = FALSE \} list of runtime variables}
 }
 \value{
 A list with elements below:
@@ -55,9 +55,10 @@ control = list(logfile = 'example_data.pfa', n_cpu = 8)
 res = pfar::pfa(dr_dat, F = init_val$factors, P = init_val$weights, control = control)
 print(res)
 }
-\references{
-...
-}
 \author{
 Gao Wang and Kushal K. Dey
 }
+\references{
+...
+}
+
