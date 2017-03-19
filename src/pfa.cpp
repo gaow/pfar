@@ -178,7 +178,7 @@ void PFA_EM::update_loglik_and_delta() {
 
 // update factor pair weights
 void PFA_EM::update_paired_factor_weights() {
-  arma::vec pik1k2 = arma::mean(delta);
+  arma::vec pik1k2 = arma::vectorise(arma::mean(delta));
 #pragma omp parallel for num_threads(n_threads)
   for (size_t k1 = 0; k1 < P.n_rows; k1++) {
     for (size_t k2 = 0; k2 <= k1; k2++) {

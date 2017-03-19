@@ -233,8 +233,10 @@ public:
     }
     if (info == 1) {
       F.print(out, "Factor matrix:");
-      P.print(out, "Factor frequency matrix:");
-      L.print(out, "Loading matrix:");
+      if (n_updates > 0) {
+        P.print(out, "Factor frequency matrix:");
+        L.print(out, "Loading matrix:");
+      }
     }
     if (info == 2) {
       // W.print(out, "E[L'L] matrix:");
