@@ -163,6 +163,7 @@ void PFA_EM::update_ldelta() {
       }
     }
   }
+  ldelta = delta;
 }
 
 // this computes loglik and delta
@@ -183,8 +184,15 @@ void PFA_EM::update_loglik_and_delta() {
     //  m + log(sum(exp(lx-m)))
     // }
     // see gaow/pfar/issue/2 for a discussion
+    // FIXME: A hack for k == k single factor case, part 1
+    for (size_t k = 0; k < F.n_rows; k++) {
+      // reset single factor case: remove zeros
+      delta.slice(n).row(F_pair_coord[std::make_pair(k, k)]).fill(
+          delta.slice(n).at(F_pair_coord[std::make_pair(k, k)], 0));
+    }
     double delta_n_max = delta.slice(n).max();
     delta.slice(n) = arma::exp(delta.slice(n) - delta_n_max);
+    // FIXME: A hack for k == k single factor case, part 2
     for (size_t k = 0; k < F.n_rows; k++) {
       // reset single factor case: has to be zero for all but the first grid
       double tmp = delta.slice(n).at(F_pair_coord[std::make_pair(k, k)], 0);

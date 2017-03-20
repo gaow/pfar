@@ -194,6 +194,7 @@ class PFA {
       // W.print(out, "E[L'L] matrix:");
       s.print(out, "Residual standard deviation of data columns:");
       if (n_updates > 0) {
+        ldelta.print(out, "log delta tensor");
         delta.print(out, "delta tensor");
       }
     }
@@ -214,6 +215,7 @@ class PFA {
   arma::vec s;
   // K1K2 by Q by N tensor
   arma::cube delta;
+  arma::cube ldelta;
   std::map<std::pair<size_t, size_t>, size_t> F_pair_coord;
   // N by K matrix of loadings
   arma::mat L;

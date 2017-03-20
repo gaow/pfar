@@ -101,6 +101,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, priors = NULL,
   alpha <- matrix(0, nrow(F), nrow(F))
   beta <- rep(0, length(q))
   status <- 0
+  start_time <- proc.time()
   res <- .C("pfa_em",
             as.double(as.vector(X)),
             F = as.double(as.vector(F)),
@@ -135,7 +136,8 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, priors = NULL,
   return(list(F_init = F, F = Fout, L = Lout, P = Pout,
               alpha = alphaout, beta = res$beta,
               loglik = loglik, loglik_diff = diff(loglik),
-              niter = res$niter, status = res$status))
+              niter = res$niter, status = res$status,
+              runtime = proc.time() - start_time))
 }
 
 #' @title Get model likelihood for PFA 
