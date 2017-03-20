@@ -158,7 +158,7 @@ class PFA {
     // initialize residual sd with sample sd
     s = arma::vectorise(arma::stddev(D));
     W.set_size(F.n_rows, F.n_rows);
-    delta.set_size(int((F.n_rows - 1) * F.n_rows / 2), q.n_elem, D.n_rows);
+    delta.set_size(int((F.n_rows + 1) * F.n_rows / 2), q.n_elem, D.n_rows);
     delta.fill(0);
     n_threads = 1;
     n_updates = 0;
@@ -194,7 +194,7 @@ class PFA {
       // W.print(out, "E[L'L] matrix:");
       s.print(out, "Residual standard deviation of data columns:");
       if (n_updates > 0) {
-        delta.print(out, "delta matrix");
+        delta.print(out, "delta tensor");
       }
     }
   }
