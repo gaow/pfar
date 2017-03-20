@@ -103,7 +103,7 @@ int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
       break;
     }
     if (f1.is_open()) {
-      f1 << "Loglik:\t" << loglik[*niter] << "\n";
+      f1 << "Loglik:\n" << loglik[*niter] << "\n";
     }
     (*niter)++;
     // check convergence
