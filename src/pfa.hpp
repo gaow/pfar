@@ -201,9 +201,10 @@ class PFA {
     if (info == 1) {
       F.print(out, "Factor matrix:");
       P.print(out, "Factor frequency matrix:");
-      if (n_updates > 0) {
+      if (n_updates > 0)
         L.print(out, "Loading matrix:");
-      }
+      else
+        out << "Loading matrix:" << std::endl;
     }
     if (info == 2) {
       // W.print(out, "E[L'L] matrix:");
