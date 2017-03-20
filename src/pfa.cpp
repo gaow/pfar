@@ -136,15 +136,15 @@ int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
 }
 
 // this computes log delta
-// return: N by k1k2 matrix of log delta
+// return: k1k2 by q by N tensor of log delta
 void PFA_EM::update_ldelta() {
 #pragma omp parallel for num_threads(n_threads)
   for (size_t k1 = 0; k1 < F.n_rows; k1++) {
     for (size_t k2 = 0; k2 <= k1; k2++) {
       // given k1, k2 and q, density is a N-vector
-      arma::vec Dn_delta = arma::zeros<arma::vec>(D.n_rows);
       for (size_t qq = 0; qq < q.n_elem; qq++) {
         if ((k1 != k2) | (k1 == k2 & qq == 0)) {
+          arma::vec Dn_delta = arma::zeros<arma::vec>(D.n_rows);
           for (size_t j = 0; j < D.n_cols; j++) {
             arma::vec density = D.col(j);
             double m =
@@ -154,43 +154,54 @@ void PFA_EM::update_ldelta() {
             Dn_delta += density.transform(
                 [=](double x) { return (normal_pdf_log(x, m, s.at(j))); });
           }
+          Dn_delta += std::log(P.at(k1, k2));
+          // FIXME: this is slow, due to the cube/slice structure
+          for (size_t n = 0; n < D.n_rows; n++)
+            delta.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], qq) = Dn_delta.at(n);
         }
       }
-      delta.col(F_pair_coord[std::make_pair(k1, k2)]) =
-          Dn_delta + std::log(P.at(k1, k2));
     }
   }
 }
 
 // this computes loglik and delta
 // this results in a N by k1k2 matrix of loglik
-// and a N by k1k2 matrix of delta
+// and the delta tensor on its original (exp) scale, with each slice summing to one
 void PFA_EM::update_loglik_and_delta() {
   arma::vec loglik_vec;
   loglik_vec.set_size(D.n_rows);
 #pragma omp parallel for num_threads(n_threads)
+  for (size_t qq = 0; qq < q.n_elem; qq++) {
+    // 1. for each N by k1k2 matrix slice from the log of sum of 
+  }
   for (size_t n = 0; n < D.n_rows; n++) {
-    // 1. find the log of sum of exp(delta.row(n))
+    // 1. find the log of sum of exp(delta.slice(n))
     // 2. exp transform delta to its proper scale: set delta prop to exp(delta)
-    // 3. scale delta to sum to 1
+    // 3. scale delta.slice(n) to sum to 1
     // a numeric trick is used to calculate log(sum(exp(x)))
     // lsum=function(lx){
     //  m = max(lx)
     //  m + log(sum(exp(lx-m)))
     // }
     // see gaow/pfar/issue/2 for a discussion
-    double delta_n_max = delta.row(n).max();
-    delta.row(n) = arma::exp(delta.row(n) - delta_n_max);
-    double sum_delta_n = arma::accu(delta.row(n));
+    double delta_n_max = delta.slice(n).max();
+    delta.slice(n) = arma::exp(delta.slice(n) - delta_n_max);
+    for (size_t k = 0; k < F.n_rows; k++) {
+      // reset single factor case: has to be zero for all but the first grid
+      double tmp = delta.slice(n).at(F_pair_coord[std::make_pair(k, k)], 0);
+      delta.slice(n).row(F_pair_coord[std::make_pair(k, k)]).fill(0);
+      delta.slice(n).at(F_pair_coord[std::make_pair(k, k)], 0) = tmp;
+    }
+    double sum_delta_n = arma::accu(delta.slice(n));
     loglik_vec.at(n) = std::log(sum_delta_n) + delta_n_max;
-    delta.row(n) = delta.row(n) / sum_delta_n;
+    delta.slice(n) = delta.slice(n) / sum_delta_n;
   }
   loglik = arma::accu(loglik_vec);
 }
 
 // update factor pair weights
 void PFA_EM::update_paired_factor_weights() {
-  arma::vec pik1k2 = arma::vectorise(arma::mean(delta));
+  arma::vec pik1k2 = arma::vectorise(arma::mean(arma::sum(delta, 1), 2));
 #pragma omp parallel for num_threads(n_threads)
   for (size_t k1 = 0; k1 < P.n_rows; k1++) {
     for (size_t k2 = 0; k2 <= k1; k2++) {

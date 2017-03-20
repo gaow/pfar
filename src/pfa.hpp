@@ -158,26 +158,10 @@ class PFA {
     // initialize residual sd with sample sd
     s = arma::vectorise(arma::stddev(D));
     W.set_size(F.n_rows, F.n_rows);
-    delta.set_size(D.n_rows, int((F.n_rows + 1) * F.n_rows / 2));
+    delta.set_size(int((F.n_rows - 1) * F.n_rows / 2), q.n_elem, D.n_rows);
+    delta.fill(0);
     n_threads = 1;
     n_updates = 0;
-    avg_q = 0;
-    avg_1q = 0;
-    avg_q2 = 0;
-    avg_1q2 = 0;
-    avg_q1q = 0;
-    for (size_t i = 0; i < q.n_elem; i++) {
-      avg_q += q[i];
-      avg_1q += (1 - q[i]);
-      avg_q2 += q[i] * q[i];
-      avg_1q2 += (1 - q[i]) * (1 - q[i]);
-      avg_q1q += q[i] * (1 - q[i]);
-    }
-    avg_q /= double(q.n_elem);
-    avg_1q /= double(q.n_elem);
-    avg_q2 /= double(q.n_elem);
-    avg_1q2 /= double(q.n_elem);
-    avg_q1q /= double(q.n_elem);
     for (size_t k1 = 0; k1 < F.n_rows; k1++) {
       for (size_t k2 = 0; k2 <= k1; k2++) {
         // set factor pair coordinates to avoid
@@ -226,17 +210,10 @@ class PFA {
   arma::mat F;
   // Q by 1 vector of membership grids
   arma::vec q;
-  // We assume every grid has equal weight
-  // we need to use these quantities in the calculation
-  double avg_q;    // \sum_q q / Q
-  double avg_1q;   // \sum_q (1-q) / Q
-  double avg_q2;   // \sum_q q^2 / Q
-  double avg_1q2;  // \sum_q (1-q)^2 / Q
-  double avg_q1q;  // \sum_q q(1-q) / Q
   // J by 1 vector of residual standard error
   arma::vec s;
-  // N by K1K2 matrix
-  arma::mat delta;
+  // K1K2 by Q by N tensor
+  arma::cube delta;
   std::map<std::pair<size_t, size_t>, size_t> F_pair_coord;
   // N by K matrix of loadings
   arma::mat L;
