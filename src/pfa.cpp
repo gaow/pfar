@@ -157,7 +157,8 @@ void PFA_EM::update_ldelta() {
           Dn_delta += std::log(P.at(k1, k2));
           // FIXME: this is slow, due to the cube/slice structure
           for (size_t n = 0; n < D.n_rows; n++)
-            delta.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], qq) = Dn_delta.at(n);
+            delta.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], qq) =
+                Dn_delta.at(n);
         }
       }
     }
@@ -166,14 +167,12 @@ void PFA_EM::update_ldelta() {
 
 // this computes loglik and delta
 // this results in a N by k1k2 matrix of loglik
-// and the delta tensor on its original (exp) scale, with each slice summing to one
+// and the delta tensor on its original (exp) scale, with each slice summing to
+// one
 void PFA_EM::update_loglik_and_delta() {
   arma::vec loglik_vec;
   loglik_vec.set_size(D.n_rows);
 #pragma omp parallel for num_threads(n_threads)
-  for (size_t qq = 0; qq < q.n_elem; qq++) {
-    // 1. for each N by k1k2 matrix slice from the log of sum of 
-  }
   for (size_t n = 0; n < D.n_rows; n++) {
     // 1. find the log of sum of exp(delta.slice(n))
     // 2. exp transform delta to its proper scale: set delta prop to exp(delta)
@@ -217,36 +216,54 @@ void PFA_EM::update_factor_model() {
   arma::mat L2 = L;
 #pragma omp parallel for num_threads(n_threads) collapse(2)
   for (size_t k = 0; k < F.n_rows; k++) {
-    // I. Compute the k-th column for E(L), the N X K matrix:
-    // and II. the diagonal elements for E(W), the K X K matrix
+    // I. First we compute the k-th column for E(L), the N X K matrix:
+    // generate the proper input for N X Q %*% Q X 1
+    // where the N X Q matrix is taken from delta given K1K2
+    // and the Q X 1 matrix correspond to the grid of q
+    // II. Then we compute the diagonal elements for E(W), the K X K matrix
+    // First we still compute a N X K matrix like above but replacing q / 1 - q
+    // with q^2 / (1 - q)^2
+    // then take colsum to get the K vector as the diagonal
     for (size_t i = 0; i < F.n_rows; i++) {
+      // create the LHS Dk1k2, N X Q matrix from delta given k1, k2
+      arma::mat Dk1k2(D.n_rows, q.n_elem, arma::fill::zeros);
+      for (size_t n = 0; n < D.n_rows; n++) {
+        Dk1k2.row(n) = delta.slice(n).row(F_pair_coord[std::make_pair(k, i)]);
+      }
 #pragma omp critical
       {
         if (k < i) {
           // I.
-          L.col(k) += delta.col(F_pair_coord[std::make_pair(k, i)]) * avg_q;
+          L.col(k) += Dk1k2 * q;
           // II.
-          L2.col(k) += delta.col(F_pair_coord[std::make_pair(k, i)]) * avg_q2;
+          L2.col(k) += Dk1k2 * (q % q);
         }
         if (k > i) {
-          L.col(k) += delta.col(F_pair_coord[std::make_pair(k, i)]) * avg_1q;
-          L2.col(k) += delta.col(F_pair_coord[std::make_pair(k, i)]) * avg_1q2;
+          L.col(k) += Dk1k2 * (1 - q);
+          L2.col(k) += Dk1k2 * ((1 - q) % (1 - q));
         }
         if (k == i) {
-          L.col(k) += delta.col(F_pair_coord[std::make_pair(k, i)]);
-          L2.col(k) += delta.col(F_pair_coord[std::make_pair(k, i)]);
+          L.col(k) += Dk1k2.col(0);
+          L2.col(k) += Dk1k2.col(0);
         }
       }
     }
   }
   // II. diagonal elements for E(W)
   W.diag() = arma::sum(L2);
-// III. Compute off-diagonal elements for E(W), the K X K matrix
+  // III. Compute off-diagonal elements for E(W), the K X K matrix
+  // for k1 != k2
+  // it involves on the LHS a vector of [q1(1-q1), q2(1-q2) ...]
+  // and on the RHS for each pair of (k1, k2) the corresponding row from delta
+  // summing over samples
+  arma::vec LHS = q % (1 - q);
+  arma::mat RHS = arma::sum(delta, 2);
+  RHS = RHS.t();
 #pragma omp parallel for num_threads(n_threads)
   for (size_t k1 = 0; k1 < F.n_rows; k1++) {
     for (size_t k2 = 0; k2 < k1; k2++) {
       W.at(k1, k2) =
-          arma::sum(delta.col(F_pair_coord[std::make_pair(k1, k2)]) * avg_q1q);
+          arma::dot(LHS, RHS.col(F_pair_coord[std::make_pair(k1, k2)]));
       W.at(k2, k1) = W.at(k1, k2);
     }
   }
@@ -255,26 +272,27 @@ void PFA_EM::update_factor_model() {
 }
 
 // S is the residual standard error vector to be updated for each feature
+// FIXME: can this be optimized via transposing the tensor delta?
 void PFA_EM::update_residual_error() {
 #pragma omp parallel for num_threads(n_threads)
   for (size_t j = 0; j < D.n_cols; j++) {
     s.at(j) = 0;
     for (size_t k1 = 0; k1 < F.n_rows; k1++) {
       for (size_t k2 = 0; k2 <= k1; k2++) {
-        if (k2 < k1) {
-          arma::vec tmp = arma::zeros<arma::vec>(D.n_rows);
-          for (size_t qq = 0; qq < q.n_elem; qq++) {
-            tmp += arma::pow(D.col(j) - q.at(qq) * F.at(k2, j) -
-                                 (1 - q.at(qq)) * F.at(k1, j),
-                             2);
+        for (size_t n = 0; n < D.n_rows; n++) {
+          if (k2 < k1) {
+            for (size_t qq = 0; qq < q.n_elem; qq++) {
+              s.at(j) +=
+                  delta.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], qq) *
+                  std::pow(D.at(n, j) - q.at(qq) * F.at(k2, j) -
+                               (1 - q.at(qq)) * F.at(k1, j),
+                           2);
+            }
+          } else {
+            s.at(j) +=
+                delta.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], 0) *
+                std::pow(D.at(n, j) - F.at(k1, j), 2);
           }
-          s.at(j) +=
-              arma::accu(delta.col(F_pair_coord[std::make_pair(k1, k2)]) /
-                         double(q.n_elem) % tmp);
-        } else {
-          s.at(j) +=
-              arma::accu(delta.col(F_pair_coord[std::make_pair(k1, k2)]) %
-                         arma::pow(D.col(j) - F.at(k1, j), 2));
         }
       }
     }
