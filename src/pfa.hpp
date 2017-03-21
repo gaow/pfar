@@ -201,6 +201,10 @@ class PFA {
   }
 
   void set_threads(int n) { n_threads = n; }
+  void update_ldelta(int core = 0);
+  void update_loglik_and_delta();
+  void update_factor_model();
+  void update_residual_error();
 
  protected:
   // N by J matrix of data
@@ -237,11 +241,7 @@ class PFA_EM : public PFA {
 
   PFA *clone() const { return new PFA_EM(*this); }
 
-  void update_ldelta();
-  void update_loglik_and_delta();
   void update_paired_factor_weights();
-  void update_factor_model();
-  void update_residual_error();
   int E_step() {
     update_ldelta();
     update_loglik_and_delta();

@@ -137,7 +137,7 @@ int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
 
 // this computes log delta
 // return: k1k2 by q by N tensor of log delta
-void PFA_EM::update_ldelta() {
+void PFA::update_ldelta(int core) {
 #pragma omp parallel for num_threads(n_threads)
   for (size_t k1 = 0; k1 < F.n_rows; k1++) {
     for (size_t k2 = 0; k2 <= k1; k2++) {
@@ -154,7 +154,8 @@ void PFA_EM::update_ldelta() {
             Dn_delta += density.transform(
                 [=](double x) { return (normal_pdf_log(x, m, s.at(j))); });
           }
-          Dn_delta += std::log(P.at(k1, k2));
+          if (core == 0)
+            Dn_delta += std::log(P.at(k1, k2));
           // FIXME: this is slow, due to the cube/slice structure
           for (size_t n = 0; n < D.n_rows; n++)
             delta.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], qq) =
@@ -170,7 +171,7 @@ void PFA_EM::update_ldelta() {
 // this results in a N by k1k2 matrix of loglik
 // and the delta tensor on its original (exp) scale, with each slice summing to
 // one
-void PFA_EM::update_loglik_and_delta() {
+void PFA::update_loglik_and_delta() {
   arma::vec loglik_vec;
   loglik_vec.set_size(D.n_rows);
 #pragma omp parallel for num_threads(n_threads)
@@ -206,19 +207,8 @@ void PFA_EM::update_loglik_and_delta() {
   loglik = arma::accu(loglik_vec);
 }
 
-// update factor pair weights
-void PFA_EM::update_paired_factor_weights() {
-  arma::vec pik1k2 = arma::vectorise(arma::mean(arma::sum(delta, 1), 2));
-#pragma omp parallel for num_threads(n_threads)
-  for (size_t k1 = 0; k1 < P.n_rows; k1++) {
-    for (size_t k2 = 0; k2 <= k1; k2++) {
-      P.at(k1, k2) = pik1k2.at(F_pair_coord[std::make_pair(k1, k2)]);
-    }
-  }
-}
-
-void PFA_EM::update_factor_model() {
-  // Factors F and loadings L are to be updated here
+// Factors F and loadings L are to be updated here
+void PFA::update_factor_model() {
   // Need to compute 2 matrices in order to solve F
   L.fill(0);
   arma::mat L2 = L;
@@ -281,7 +271,7 @@ void PFA_EM::update_factor_model() {
 
 // S is the residual standard error vector to be updated for each feature
 // FIXME: can this be optimized via transposing the tensor delta?
-void PFA_EM::update_residual_error() {
+void PFA::update_residual_error() {
 #pragma omp parallel for num_threads(n_threads)
   for (size_t j = 0; j < D.n_cols; j++) {
     s.at(j) = 0;
@@ -305,5 +295,16 @@ void PFA_EM::update_residual_error() {
       }
     }
     s.at(j) = std::sqrt(s.at(j) / double(D.n_rows));
+  }
+}
+
+// update factor pair weights
+void PFA_EM::update_paired_factor_weights() {
+  arma::vec pik1k2 = arma::vectorise(arma::mean(arma::sum(delta, 1), 2));
+#pragma omp parallel for num_threads(n_threads)
+  for (size_t k1 = 0; k1 < P.n_rows; k1++) {
+    for (size_t k2 = 0; k2 <= k1; k2++) {
+      P.at(k1, k2) = pik1k2.at(F_pair_coord[std::make_pair(k1, k2)]);
+    }
   }
 }
