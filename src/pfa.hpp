@@ -142,8 +142,8 @@ class RuntimeError : public Exception {
 
 extern "C" int pfa_em(double *, double *, double *, double *, int *, int *,
                       int *, int *, double *, int *, double *, int *, int *,
-                      double *, double *, double *, int *,
-                      int *, int *, int *, int *, int *);
+                      double *, double *, double *, int *, int *, int *, int *,
+                      int *, int *);
 
 class PFA {
  public:
@@ -303,9 +303,8 @@ class PFA_VEM : public PFA {
       update_paired_factor_weights();
       lposterior.push_back(get_variational_posterior());
       if (lposterior.back() != lposterior.back()) {
-        std::cerr
-            << "[ERROR] ln(pi) nan produced in variational approximation!"
-            << std::endl;
+        std::cerr << "[ERROR] ln(pi) nan produced in variational approximation!"
+                  << std::endl;
         status = 1;
         break;
       }
@@ -315,8 +314,8 @@ class PFA_VEM : public PFA {
         if (diff < 0.0) {
           std::cerr << "[ERROR] ln(pi) decreased in variational "
                        "approximation:  \n\tfrom "
-                    << lposterior[niter - 2] << " to " << lposterior[niter - 1] << "!"
-                    << std::endl;
+                    << lposterior[niter - 2] << " to " << lposterior[niter - 1]
+                    << "!" << std::endl;
           status = 1;
           break;
         }
@@ -326,8 +325,9 @@ class PFA_VEM : public PFA {
         std::cerr << "[WARNIKNG] variational approximation procedure failed to "
                      "converge at tolerance level "
                   << tol << ", after " << maxiter
-                  << " iterations: \n\tlog posterior starts " << lposterior.front()
-                  << ", ends " << lposterior.back() << "!" << std::endl;
+                  << " iterations: \n\tlog posterior starts "
+                  << lposterior.front() << ", ends " << lposterior.back() << "!"
+                  << std::endl;
         status = 1;
         break;
       }

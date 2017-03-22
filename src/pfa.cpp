@@ -38,10 +38,9 @@
 // @param n_threads [int_pt] number of threads for parallel processing
 
 int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
-           int* C, double* alpha0, int * variational, double* tol, int* maxiter,
-           int* niter, double* loglik, double* L, double* alpha,
-           int* status, int* logfn_1, int* nlf_1, int* logfn_2, int* nlf_2,
-           int* n_threads) {
+           int* C, double* alpha0, int* variational, double* tol, int* maxiter,
+           int* niter, double* loglik, double* L, double* alpha, int* status,
+           int* logfn_1, int* nlf_1, int* logfn_2, int* nlf_2, int* n_threads) {
   //
   // Set up logfiles
   //
@@ -73,7 +72,7 @@ int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
   // Fit model
   //
   *niter = 0;
-  PFA * model;
+  PFA* model;
   if (*variational)
     model = new PFA_VEM(X, F, P, q, L, alpha, *N, *J, *K, *C, *alpha0);
   else
@@ -131,8 +130,8 @@ int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
     model->M_step();
   }
   if (*status)
-    std::cerr << "[WARNING] PFA failed to converge after " << *niter
-              << " iterations!" << std::endl;
+    std::cerr << "[WARNING] PFA failed to converge at tolerance level " << *tol
+              << " after " << *niter << " iterations!" << std::endl;
   if (f1.is_open()) f1.close();
   if (f2.is_open()) f2.close();
   return 0;
@@ -158,6 +157,8 @@ void PFA::update_ldelta(int core) {
                 [=](double x) { return (normal_pdf_log(x, m, s.at(j))); });
           }
           if (core == 0) Dn_delta += std::log(P.at(k1, k2));
+          if (k1 != k2)
+            Dn_delta += std::log(1 / double(q.n_elem));
           // FIXME: this is slow, due to the cube/slice structure
           for (size_t n = 0; n < D.n_rows; n++)
             delta.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], qq) =
@@ -178,9 +179,6 @@ void PFA_VEM::update_variational_ldelta() {
       for (size_t n = 0; n < D.n_rows; n++) {
         delta.slice(n).row(F_pair_coord[std::make_pair(k1, k2)]) +=
             digamma_alpha.at(k1, k2) - digamma_sum_alpha;
-        if (k1 != k2)
-          delta.slice(n).row(F_pair_coord[std::make_pair(k1, k2)]) +=
-              std::log(1 / double(q.n_elem));
       }
     }
   }
