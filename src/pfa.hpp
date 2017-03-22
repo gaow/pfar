@@ -304,7 +304,7 @@ class PFA_VEM : public PFA {
       lposterior.push_back(get_variational_posterior());
       if (lposterior.back() != lposterior.back()) {
         std::cerr
-            << "[ERROR] likelihood nan produced in variational approximation!"
+            << "[ERROR] ln(pi) nan produced in variational approximation!"
             << std::endl;
         status = 1;
         break;
@@ -313,7 +313,7 @@ class PFA_VEM : public PFA {
       if (niter > 1) {
         double diff = lposterior[niter - 1] - lposterior[niter - 2];
         if (diff < 0.0) {
-          std::cerr << "[ERROR] likelihood decreased in variational "
+          std::cerr << "[ERROR] ln(pi) decreased in variational "
                        "approximation:  \n\tfrom "
                     << lposterior[niter - 2] << " to " << lposterior[niter - 1] << "!"
                     << std::endl;
