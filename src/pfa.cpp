@@ -353,4 +353,5 @@ double PFA_VEM::get_variational_posterior() {
       posterior += (alpha.at(k1, k2) - 1) * std::log(P.at(k1, k2));
     }
   }
+  return posterior;
 }
