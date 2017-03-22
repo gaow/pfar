@@ -162,6 +162,7 @@ class PFA {
     delta.fill(0);
     n_threads = 1;
     n_updates = 0;
+    node_fudge = 1.0;
     for (size_t k1 = 0; k1 < F.n_rows; k1++) {
       for (size_t k2 = 0; k2 <= k1; k2++) {
         // set factor pair coordinates to avoid
@@ -220,6 +221,8 @@ class PFA {
   int n_threads;
   // updates on the model
   int n_updates;
+  // fudge factor for more weights on the node
+  double node_fudge;
 };
 
 class PFA_EM : public PFA {
@@ -287,7 +290,7 @@ class PFA_VEM : public PFA {
   PFA *clone() const { return new PFA_VEM(*this); }
 
   void update_variational_ldelta();
-  double get_variational_posterior();
+  double get_variational_lowerbound();
   void update_variational_parameters();
   void update_paired_factor_weights();
 
@@ -295,26 +298,26 @@ class PFA_VEM : public PFA {
     int status = 0;
     update_ldelta(1);
     size_t niter = 0;
-    lposterior.resize(0);
+    lowerbound.resize(0);
     while (niter <= maxiter) {
       update_variational_ldelta();
       update_loglik_and_delta();
       update_variational_parameters();
       update_paired_factor_weights();
-      lposterior.push_back(get_variational_posterior());
-      if (lposterior.back() != lposterior.back()) {
-        std::cerr << "[ERROR] ln(pi) nan produced in variational approximation!"
+      lowerbound.push_back(get_variational_lowerbound());
+      if (lowerbound.back() != lowerbound.back()) {
+        std::cerr << "[ERROR] lower bound nan produced in variational approximation!"
                   << std::endl;
         status = 1;
         break;
       }
       niter++;
       if (niter > 1) {
-        double diff = lposterior[niter - 1] - lposterior[niter - 2];
+        double diff = lowerbound[niter - 1] - lowerbound[niter - 2];
         if (diff < 0.0) {
-          std::cerr << "[ERROR] ln(pi) decreased in variational "
+          std::cerr << "[ERROR] lower bound decreased in variational "
                        "approximation:  \n\tfrom "
-                    << lposterior[niter - 2] << " to " << lposterior[niter - 1]
+                    << lowerbound[niter - 2] << " to " << lowerbound[niter - 1]
                     << "!" << std::endl;
           status = 1;
           break;
@@ -325,8 +328,8 @@ class PFA_VEM : public PFA {
         std::cerr << "[WARNIKNG] variational approximation procedure failed to "
                      "converge at tolerance level "
                   << tol << ", after " << maxiter
-                  << " iterations: \n\tlog posterior starts "
-                  << lposterior.front() << ", ends " << lposterior.back() << "!"
+                  << " iterations: \n\tlog lower bound starts "
+                  << lowerbound.front() << ", ends " << lowerbound.back() << "!"
                   << std::endl;
         status = 1;
         break;
@@ -360,9 +363,9 @@ class PFA_VEM : public PFA {
       s.print(out, "Residual standard deviation of data columns:");
       if (n_updates > 0) {
         alpha.print(out, "Dirichlet parameter for factor pairs:");
-        out << "log posterior:" << std::endl;
-        for (size_t i = 0; i < lposterior.size(); ++i) {
-          out << lposterior[i] << ", ";
+        out << "log lower bound:" << std::endl;
+        for (size_t i = 0; i < lowerbound.size(); ++i) {
+          out << lowerbound[i] << ", ";
         }
         out << std::endl;
       }
@@ -379,6 +382,6 @@ class PFA_VEM : public PFA {
   double digamma_sum_alpha;
   size_t maxiter;
   double tol;
-  std::vector<double> lposterior;
+  std::vector<double> lowerbound;
 };
 #endif

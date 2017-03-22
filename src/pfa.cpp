@@ -13,7 +13,8 @@
 // @param P [K, K] initial frequency matrix of factor pairs, an upper diagonal
 // matrix
 // @param q [C, 1] initial vector of possible membership loadings, a discrete
-// set
+// set. It has to be ordered (ascending), start with zero and end with a value
+// smaller than one.
 // @param N [int_pt] number of rows of matrix X
 // @param J [int_pt] number of columns of matrix X and F
 // @param K [int_pt] number of rows of matrix F and P
@@ -156,9 +157,8 @@ void PFA::update_ldelta(int core) {
             Dn_delta += density.transform(
                 [=](double x) { return (normal_pdf_log(x, m, s.at(j))); });
           }
+          if (k1 != k2) Dn_delta += std::log(1 / node_fudge);
           if (core == 0) Dn_delta += std::log(P.at(k1, k2));
-          if (k1 != k2)
-            Dn_delta += std::log(1 / double(q.n_elem));
           // FIXME: this is slow, due to the cube/slice structure
           for (size_t n = 0; n < D.n_rows; n++)
             delta.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], qq) =
@@ -344,13 +344,13 @@ void PFA_VEM::update_variational_parameters() {
 
 void PFA_VEM::update_paired_factor_weights() { P = alpha / arma::accu(alpha); }
 
-double PFA_VEM::get_variational_posterior() {
-  double posterior = loglik;
+double PFA_VEM::get_variational_lowerbound() {
+  double lowerbound = loglik;
   // add prior part for factor weights
   for (size_t k1 = 0; k1 < P.n_rows; k1++) {
     for (size_t k2 = 0; k2 <= k1; k2++) {
-      posterior += (alpha.at(k1, k2) - 1) * std::log(P.at(k1, k2));
+      lowerbound += (alpha.at(k1, k2) - 1) * std::log(P.at(k1, k2));
     }
   }
-  return posterior;
+  return lowerbound;
 }
