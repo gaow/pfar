@@ -4,7 +4,7 @@
 \alias{pfa}
 \title{Paired factor analysis model}
 \usage{
-pfa(X, K = NULL, F = NULL, P = NULL, q = NULL, priors = NULL,
+pfa(X, K = NULL, F = NULL, P = NULL, q = NULL, alpha = NULL,
   control = NULL)
 }
 \arguments{
@@ -19,7 +19,7 @@ the diagonal is single factor frequencies.}
 
 \item{q}{[C, 1] / [int] defines initial vector of possible membership loadings, a discrete set}
 
-\item{priors}{[double, double] priors for edge weights and grid weights}
+\item{alpha}{[double] prior for factor pair weights}
 
 \item{control}{\{tol = 1E-5, maxiter = 10000, logfile = NULL, n_cpu = 4, verbose = FALSE \} list of runtime variables}
 }
