@@ -102,6 +102,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, alpha = NULL,
   loglik <- rep(-999, maxiter)
   niter <- 0
   L <- matrix(0, nrow(X), nrow(F))
+  alpha0 <- alpha
   alpha <- matrix(0, nrow(F), nrow(F))
   status <- 0
   start_time <- proc.time()
@@ -114,7 +115,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, alpha = NULL,
             as.integer(ncol(X)),
             as.integer(nrow(F)),
             as.integer(length(q)),
-            as.double(alpha),
+            as.double(alpha0),
             as.integer(variational),
             as.double(tol),
             as.integer(maxiter),

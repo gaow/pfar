@@ -279,7 +279,7 @@ class PFA_VEM : public PFA {
     alpha.zeros();
     digamma_alpha.set_size(P.n_rows, P.n_rows);
     digamma_alpha.fill(digamma(alpha0));
-    digamma_sum_alpha = digamma(alpha0 * (P.n_rows + 1) * P.n_rows / 2);
+    digamma_sum_alpha = 0;
     maxiter = 1000;
     tol = 1E-3;
   }

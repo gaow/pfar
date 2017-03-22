@@ -331,7 +331,6 @@ void PFA_EM::update_paired_factor_weights() {
 
 // update variational parameters
 void PFA_VEM::update_variational_parameters() {
-  digamma_sum_alpha = 0;
 #pragma omp parallel for num_threads(n_threads)
   for (size_t k1 = 0; k1 < P.n_rows; k1++) {
     for (size_t k2 = 0; k2 <= k1; k2++) {
@@ -340,10 +339,9 @@ void PFA_VEM::update_variational_parameters() {
       tmp = alpha0 + tmp_vec.at(F_pair_coord[std::make_pair(k1, k2)]);
       alpha.at(k1, k2) = tmp;
       digamma_alpha.at(k1, k2) = digamma(tmp);
-      digamma_sum_alpha += tmp;
     }
   }
-  digamma_sum_alpha = digamma(digamma_sum_alpha);
+  digamma_sum_alpha = digamma(arma::accu(alpha));
 }
 
 void PFA_VEM::update_paired_factor_weights() { P = alpha / arma::accu(alpha); }
