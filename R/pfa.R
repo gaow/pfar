@@ -6,7 +6,7 @@
 #' @param P [K, K] initial factor frequency matrix: the lower triangle is pair frequencies,
 #' the diagonal is single factor frequencies.
 #' @param q [C, 1] / [int] defines initial vector of possible membership loadings, a discrete set
-#' @param priors [double, double] priors for edge weights and grid weights
+#' @param alpha [double] prior for factor pair weights
 #' @param control \{tol = 1E-5, maxiter = 10000, logfile = NULL, n_cpu = 4, verbose = FALSE \} list of runtime variables
 #' @return A list with elements below:
 #' \item{F}{...}
@@ -38,7 +38,7 @@
 #' @useDynLib pfar
 #' @export
 
-pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, priors = NULL,
+pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, alpha = NULL,
                 control = NULL) {
   ## Initialize data
   if (is.null(F) && is.null(K)) {
@@ -64,8 +64,13 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, priors = NULL,
   if (is.integer(q)) {
     q <- seq(0, 100, by = max(as.integer(100 / q), 1)) / 100
   }
-  if (is.null(priors)) {
-    priors <- c(2 / ((K + 1) * K), 1)
+  if (is.null(alpha)) {
+    variational <- 0
+  } else {
+    variational <- 1
+    if (alpha == "auto") {
+      alpha <- 2 / ((K + 1) * K)
+    }
   }
   tol <- as.double(control$tol)
   if (length(tol) == 0 || tol <= 0) {
@@ -93,13 +98,11 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, priors = NULL,
   stopifnot(ncol(X) == ncol(F))
   stopifnot(nrow(F) == nrow(P))
   stopifnot(nrow(P) == ncol(P))
-  stopifnot(length(priors) == 2)
   ## factor analysis
   loglik <- rep(-999, maxiter)
   niter <- 0
   L <- matrix(0, nrow(X), nrow(F))
   alpha <- matrix(0, nrow(F), nrow(F))
-  beta <- rep(0, length(q))
   status <- 0
   start_time <- proc.time()
   res <- .C("pfa_em",
@@ -111,15 +114,14 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, priors = NULL,
             as.integer(ncol(X)),
             as.integer(nrow(F)),
             as.integer(length(q)),
-            as.double(priors[1]),
-            as.double(priors[2]),
+            as.double(alpha),
+            as.integer(variational),
             as.double(tol),
             as.integer(maxiter),
             niter = as.integer(niter),
             loglik = as.double(as.vector(loglik)),
             L = as.double(as.vector(L)),
             alpha = as.double(as.vector(alpha)),
-            beta = as.double(as.vector(beta)),
             status = as.integer(status),
             as.integer(as.vector(f1)),
             as.integer(n_f1),
@@ -130,11 +132,14 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, priors = NULL,
   ## Process output
   Fout <- matrix(res$F, nrow(F), ncol(F))
   Lout <- matrix(res$L, nrow(L), ncol(L))
-  alphaout <- matrix(res$alpha, nrow(alpha), ncol(alpha))
+  if (variational) {
+    alphaout <- matrix(res$alpha, nrow(alpha), ncol(alpha))
+  } else {
+    alphaout <- NULL
+  }
   Pout <- matrix(res$P, nrow(P), ncol(P))
   loglik <- res$loglik[1:res$niter]
-  return(list(F_init = F, F = Fout, L = Lout, P = Pout,
-              alpha = alphaout, beta = res$beta,
+  return(list(F_init = F, F = Fout, L = Lout, P = Pout, alpha = alphaout,
               loglik = loglik, loglik_diff = diff(loglik),
               niter = res$niter, status = res$status,
               runtime = proc.time() - start_time))
@@ -153,7 +158,6 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, priors = NULL,
 #' @examples
 #' @export
 
-#function to find the log of the sum of exp(lx).
 lsum <- function(lx){
   m <- max(lx)
   m + log(sum(exp(lx-m)))

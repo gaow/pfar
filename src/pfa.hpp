@@ -141,9 +141,9 @@ class RuntimeError : public Exception {
 };
 
 extern "C" int pfa_em(double *, double *, double *, double *, int *, int *,
-                      int *, int *, double *, double *, double *, int *, int *,
-                      double *, double *, double *, double *, int *, int *,
-                      int *, int *, int *, int *);
+                      int *, int *, double *, int *, double *, int *, int *,
+                      double *, double *, double *, int *,
+                      int *, int *, int *, int *, int *);
 
 class PFA {
  public:
@@ -178,7 +178,14 @@ class PFA {
   virtual PFA *clone() const { return new PFA(*this); }
 
   virtual void write(std::ostream &out, int info) {
-    throw RuntimeError("The base write function should not be called");
+    throw RuntimeError("The base write() function should not be called");
+  }
+  virtual int E_step() {
+    throw RuntimeError("The base E_step() function should not be called");
+  }
+
+  virtual int M_step() {
+    throw RuntimeError("The base M_step() function should not be called");
   }
 
   void set_threads(int n) { n_threads = n; }
@@ -288,14 +295,14 @@ class PFA_VEM : public PFA {
     int status = 0;
     update_ldelta(1);
     size_t niter = 0;
-    std::vector<double> logpost(0);
+    lposterior.resize(0);
     while (niter <= maxiter) {
       update_variational_ldelta();
       update_loglik_and_delta();
       update_variational_parameters();
       update_paired_factor_weights();
-      logpost.push_back(get_variational_posterior());
-      if (logpost.back() != logpost.back()) {
+      lposterior.push_back(get_variational_posterior());
+      if (lposterior.back() != lposterior.back()) {
         std::cerr
             << "[ERROR] likelihood nan produced in variational approximation!"
             << std::endl;
@@ -304,11 +311,11 @@ class PFA_VEM : public PFA {
       }
       niter++;
       if (niter > 1) {
-        double diff = logpost[niter - 1] - logpost[niter - 2];
+        double diff = lposterior[niter - 1] - lposterior[niter - 2];
         if (diff < 0.0) {
           std::cerr << "[ERROR] likelihood decreased in variational "
                        "approximation:  \n\tfrom "
-                    << logpost[niter - 2] << " to " << logpost[niter - 1] << "!"
+                    << lposterior[niter - 2] << " to " << lposterior[niter - 1] << "!"
                     << std::endl;
           status = 1;
           break;
@@ -319,8 +326,8 @@ class PFA_VEM : public PFA {
         std::cerr << "[WARNIKNG] variational approximation procedure failed to "
                      "converge at tolerance level "
                   << tol << ", after " << maxiter
-                  << " iterations: \n\tlog posterior starts " << logpost.front()
-                  << ", ends " << logpost.back() << "!" << std::endl;
+                  << " iterations: \n\tlog posterior starts " << lposterior.front()
+                  << ", ends " << lposterior.back() << "!" << std::endl;
         status = 1;
         break;
       }
@@ -353,6 +360,11 @@ class PFA_VEM : public PFA {
       s.print(out, "Residual standard deviation of data columns:");
       if (n_updates > 0) {
         alpha.print(out, "Dirichlet parameter for factor pairs:");
+        out << "log posterior:" << std::endl;
+        for (size_t i = 0; i < lposterior.size(); ++i) {
+          out << lposterior[i] << ", ";
+        }
+        out << std::endl;
       }
     }
   }
@@ -367,5 +379,6 @@ class PFA_VEM : public PFA {
   double digamma_sum_alpha;
   size_t maxiter;
   double tol;
+  std::vector<double> lposterior;
 };
 #endif

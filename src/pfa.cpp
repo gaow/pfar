@@ -19,7 +19,7 @@
 // @param K [int_pt] number of rows of matrix F and P
 // @param C [int_pt] number of elements in q
 // @param alpha0 [double_pt] Dirichlet prior for factor weights
-// @param beta0 [double_pt] Dirichlet prior for grid weights
+// @param variational [int_pt] 0 or 1, whether or not to use variational method
 // @param tol [double_pt] tolerance for convergence
 // @param maxiter [int_pt] maximum number of iterations
 // @param niter [int_pt] number of iterations
@@ -27,7 +27,6 @@
 // @param L [N, K] Loading matrix (return)
 // @param alpha [K, K] Dirichlet posterior parameter matrix for factor pair
 // weights (return)
-// @param beta [C, 1] Dirichlet posterior parameter vector for grid weights
 // (return)
 // @param status [int_pt] return status, 0 for good, 1 for error (return)
 // @param logfn_1 [int_pt] log file 1 name as integer converted from character
@@ -39,8 +38,8 @@
 // @param n_threads [int_pt] number of threads for parallel processing
 
 int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
-           int* C, double* alpha0, double* beta0, double* tol, int* maxiter,
-           int* niter, double* loglik, double* L, double* alpha, double* beta,
+           int* C, double* alpha0, int * variational, double* tol, int* maxiter,
+           int* niter, double* loglik, double* L, double* alpha,
            int* status, int* logfn_1, int* nlf_1, int* logfn_2, int* nlf_2,
            int* n_threads) {
   //
@@ -74,29 +73,33 @@ int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
   // Fit model
   //
   *niter = 0;
-  PFA_EM model(X, F, P, q, L, *N, *J, *K, *C);
-  model.set_threads(*n_threads);
-  model.write(f1, 0);
+  PFA * model;
+  if (*variational)
+    model = new PFA_VEM(X, F, P, q, L, alpha, *N, *J, *K, *C, *alpha0);
+  else
+    model = new PFA_EM(X, F, P, q, L, *N, *J, *K, *C);
+  model->set_threads(*n_threads);
+  model->write(f1, 0);
   while (*niter <= *maxiter) {
     if (f1.is_open()) {
       f1 << "#----------------------------------\n";
       f1 << "# Iteration " << *niter << "\n";
       f1 << "#----------------------------------\n";
-      model.write(f1, 1);
+      model->write(f1, 1);
       if (f2.is_open()) {
         f2 << "#----------------------------------\n";
         f2 << "# Iteration " << *niter << "\n";
         f2 << "#----------------------------------\n";
-        model.write(f2, 2);
+        model->write(f2, 2);
       }
     }
-    int e_status = model.E_step();
+    int e_status = model->E_step();
     if (e_status != 0) {
       std::cerr << "[ERROR] E step failed!" << std::endl;
       *status = 1;
       break;
     }
-    loglik[*niter] = model.get_loglik();
+    loglik[*niter] = model->get_loglik();
     if (loglik[*niter] != loglik[*niter]) {
       std::cerr << "[ERROR] likelihood nan produced!" << std::endl;
       *status = 1;
@@ -125,7 +128,7 @@ int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
       break;
     }
     // continue with more iterations
-    model.M_step();
+    model->M_step();
   }
   if (*status)
     std::cerr << "[WARNING] PFA failed to converge after " << *niter
