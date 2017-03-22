@@ -154,8 +154,7 @@ void PFA::update_ldelta(int core) {
             Dn_delta += density.transform(
                 [=](double x) { return (normal_pdf_log(x, m, s.at(j))); });
           }
-          if (core == 0)
-            Dn_delta += std::log(P.at(k1, k2));
+          if (core == 0) Dn_delta += std::log(P.at(k1, k2));
           // FIXME: this is slow, due to the cube/slice structure
           for (size_t n = 0; n < D.n_rows; n++)
             delta.slice(n).at(F_pair_coord[std::make_pair(k1, k2)], qq) =
@@ -165,6 +164,23 @@ void PFA::update_ldelta(int core) {
     }
   }
   ldelta = delta;
+}
+
+void PFA_VEM::update_variational_ldelta() {
+  delta = ldelta;
+#pragma omp parallel for num_threads(n_threads)
+  for (size_t k1 = 0; k1 < F.n_rows; k1++) {
+    for (size_t k2 = 0; k2 <= k1; k2++) {
+      // FIXME: this is slow, due to the cube/slice structure
+      for (size_t n = 0; n < D.n_rows; n++) {
+        delta.slice(n).row(F_pair_coord[std::make_pair(k1, k2)]) +=
+            digamma_alpha.at(k1, k2) - digamma_sum_alpha;
+        if (k1 != k2)
+          delta.slice(n).row(F_pair_coord[std::make_pair(k1, k2)]) +=
+              std::log(1 / double(q.n_elem));
+      }
+    }
+  }
 }
 
 // this computes loglik and delta
@@ -188,8 +204,9 @@ void PFA::update_loglik_and_delta() {
     // FIXME: A hack for k == k single factor case, part 1
     for (size_t k = 0; k < F.n_rows; k++) {
       // reset single factor case: remove zeros
-      delta.slice(n).row(F_pair_coord[std::make_pair(k, k)]).fill(
-          delta.slice(n).at(F_pair_coord[std::make_pair(k, k)], 0));
+      delta.slice(n)
+          .row(F_pair_coord[std::make_pair(k, k)])
+          .fill(delta.slice(n).at(F_pair_coord[std::make_pair(k, k)], 0));
     }
     double delta_n_max = delta.slice(n).max();
     delta.slice(n) = arma::exp(delta.slice(n) - delta_n_max);
@@ -305,6 +322,35 @@ void PFA_EM::update_paired_factor_weights() {
   for (size_t k1 = 0; k1 < P.n_rows; k1++) {
     for (size_t k2 = 0; k2 <= k1; k2++) {
       P.at(k1, k2) = pik1k2.at(F_pair_coord[std::make_pair(k1, k2)]);
+    }
+  }
+}
+
+// update variational parameters
+void PFA_VEM::update_variational_parameters() {
+  digamma_sum_alpha = 0;
+#pragma omp parallel for num_threads(n_threads)
+  for (size_t k1 = 0; k1 < P.n_rows; k1++) {
+    for (size_t k2 = 0; k2 <= k1; k2++) {
+      double tmp = 0;
+      arma::vec tmp_vec = arma::vectorise(arma::sum(arma::sum(delta, 2), 0));
+      tmp = alpha0 + tmp_vec.at(F_pair_coord[std::make_pair(k1, k2)]);
+      alpha.at(k1, k2) = tmp;
+      digamma_alpha.at(k1, k2) = digamma(tmp);
+      digamma_sum_alpha += tmp;
+    }
+  }
+  digamma_sum_alpha = digamma(digamma_sum_alpha);
+}
+
+void PFA_VEM::update_paired_factor_weights() { P = alpha / arma::accu(alpha); }
+
+double PFA_VEM::get_variational_posterior() {
+  double posterior = loglik;
+  // add prior part for factor weights
+  for (size_t k1 = 0; k1 < P.n_rows; k1++) {
+    for (size_t k2 = 0; k2 <= k1; k2++) {
+      posterior += (alpha.at(k1, k2) - 1) * std::log(P.at(k1, k2));
     }
   }
 }

@@ -177,27 +177,8 @@ class PFA {
 
   virtual PFA *clone() const { return new PFA(*this); }
 
-  void write(std::ostream &out, int info) {
-    if (info == 0) {
-      // D.print(out, "Data Matrix:");
-      q.print(out, "Membership grids:");
-    }
-    if (info == 1) {
-      F.print(out, "Factor matrix:");
-      P.print(out, "Factor frequency matrix:");
-      if (n_updates > 0)
-        L.print(out, "Loading matrix:");
-      else
-        out << "Loading matrix:" << std::endl;
-    }
-    if (info == 2) {
-      // W.print(out, "E[L'L] matrix:");
-      s.print(out, "Residual standard deviation of data columns:");
-      if (n_updates > 0) {
-        ldelta.print(out, "log delta tensor");
-        delta.print(out, "delta tensor");
-      }
-    }
+  virtual void write(std::ostream &out, int info) {
+    throw RuntimeError("The base write function should not be called");
   }
 
   void set_threads(int n) { n_threads = n; }
@@ -205,6 +186,7 @@ class PFA {
   void update_loglik_and_delta();
   void update_factor_model();
   void update_residual_error();
+  double get_loglik() { return loglik; }
 
  protected:
   // N by J matrix of data
@@ -256,6 +238,134 @@ class PFA_EM : public PFA {
     return 0;
   }
 
-  double get_loglik() { return loglik; }
+  void write(std::ostream &out, int info) {
+    if (info == 0) {
+      // D.print(out, "Data Matrix:");
+      q.print(out, "Membership grids:");
+    }
+    if (info == 1) {
+      F.print(out, "Factor matrix:");
+      P.print(out, "Factor frequency matrix:");
+      if (n_updates > 0)
+        L.print(out, "Loading matrix:");
+      else
+        out << "Loading matrix:" << std::endl;
+    }
+    if (info == 2) {
+      // W.print(out, "E[L'L] matrix:");
+      s.print(out, "Residual standard deviation of data columns:");
+      if (n_updates > 0) {
+        ldelta.print(out, "log delta tensor");
+        delta.print(out, "delta tensor");
+      }
+    }
+  }
+};
+
+class PFA_VEM : public PFA {
+ public:
+  PFA_VEM(double *cX, double *cF, double *cP, double *cQ, double *cLout,
+          double *calphaout, int N, int J, int K, int C, double alpha0)
+      : PFA(cX, cF, cP, cQ, cLout, N, J, K, C),
+        alpha(calphaout, K, K, false, true),
+        alpha0(alpha0) {
+    alpha.zeros();
+    digamma_alpha.set_size(P.n_rows, P.n_rows);
+    digamma_alpha.fill(digamma(alpha0));
+    digamma_sum_alpha = digamma(alpha0 * (P.n_rows + 1) * P.n_rows / 2);
+    maxiter = 1000;
+    tol = 1E-3;
+  }
+
+  PFA *clone() const { return new PFA_VEM(*this); }
+
+  void update_variational_ldelta();
+  double get_variational_posterior();
+  void update_variational_parameters();
+  void update_paired_factor_weights();
+
+  int E_step() {
+    int status = 0;
+    update_ldelta(1);
+    size_t niter = 0;
+    std::vector<double> logpost(0);
+    while (niter <= maxiter) {
+      update_variational_ldelta();
+      update_loglik_and_delta();
+      update_variational_parameters();
+      update_paired_factor_weights();
+      logpost.push_back(get_variational_posterior());
+      if (logpost.back() != logpost.back()) {
+        std::cerr
+            << "[ERROR] likelihood nan produced in variational approximation!"
+            << std::endl;
+        status = 1;
+        break;
+      }
+      niter++;
+      if (niter > 1) {
+        double diff = logpost[niter - 1] - logpost[niter - 2];
+        if (diff < 0.0) {
+          std::cerr << "[ERROR] likelihood decreased in variational "
+                       "approximation:  \n\tfrom "
+                    << logpost[niter - 2] << " to " << logpost[niter - 1] << "!"
+                    << std::endl;
+          status = 1;
+          break;
+        }
+        if (diff < tol) break;
+      }
+      if (niter == maxiter) {
+        std::cerr << "[WARNIKNG] variational approximation procedure failed to "
+                     "converge at tolerance level "
+                  << tol << ", after " << maxiter
+                  << " iterations: \n\tlog posterior starts " << logpost.front()
+                  << ", ends " << logpost.back() << "!" << std::endl;
+        status = 1;
+        break;
+      }
+    }
+    return status;
+  }
+
+  int M_step() {
+    update_factor_model();
+    update_residual_error();
+    n_updates += 1;
+    return 0;
+  }
+
+  void write(std::ostream &out, int info) {
+    if (info == 0) {
+      // D.print(out, "Data Matrix:");
+      q.print(out, "Membership grids:");
+    }
+    if (info == 1) {
+      F.print(out, "Factor matrix:");
+      P.print(out, "Factor frequency matrix:");
+      if (n_updates > 0)
+        L.print(out, "Loading matrix:");
+      else
+        out << "Loading matrix:" << std::endl;
+    }
+    if (info == 2) {
+      // W.print(out, "E[L'L] matrix:");
+      s.print(out, "Residual standard deviation of data columns:");
+      if (n_updates > 0) {
+        alpha.print(out, "Dirichlet parameter for factor pairs:");
+      }
+    }
+  }
+
+ private:
+  // Dirichlet priors for factors and grids
+  double alpha0;
+  // K by K matrix of digamma of variational parameter for factor pair
+  // frequencies
+  arma::mat digamma_alpha;
+  arma::mat alpha;
+  double digamma_sum_alpha;
+  size_t maxiter;
+  double tol;
 };
 #endif
