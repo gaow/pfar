@@ -144,6 +144,8 @@ extern "C" int pfa_em(double *, double *, double *, double *, int *, int *,
                       int *, int *, double *, int *, double *, int *, int *,
                       double *, double *, double *, int *, int *, int *, int *,
                       int *, int *);
+extern "C" int pfa_model_loglik(double *, double *, double *, double *,
+                                double *, int *, int *, int *, double *);
 
 class PFA {
  public:
@@ -160,7 +162,7 @@ class PFA {
     W.set_size(F.n_rows, F.n_rows);
     delta.set_size(int((F.n_rows + 1) * F.n_rows / 2), q.n_elem, D.n_rows);
     delta.fill(0);
-    n_threads = 1;
+    n_threads = omp_get_max_threads();
     n_updates = 0;
     node_fudge = 1.0;
     for (size_t k1 = 0; k1 < F.n_rows; k1++) {
@@ -189,6 +191,7 @@ class PFA {
     throw RuntimeError("The base M_step() function should not be called");
   }
 
+  void update_model_loglik(arma::vec &true_s, arma::mat &true_q) {}
   void set_threads(int n) { n_threads = n; }
   void update_ldelta(int core = 0);
   void update_loglik_and_delta();
@@ -306,8 +309,9 @@ class PFA_VEM : public PFA {
       update_paired_factor_weights();
       lowerbound.push_back(get_variational_lowerbound());
       if (lowerbound.back() != lowerbound.back()) {
-        std::cerr << "[ERROR] lower bound nan produced in variational approximation!"
-                  << std::endl;
+        std::cerr
+            << "[ERROR] lower bound nan produced in variational approximation!"
+            << std::endl;
         status = 1;
         break;
       }
@@ -316,9 +320,8 @@ class PFA_VEM : public PFA {
         double diff = lowerbound[niter - 1] - lowerbound[niter - 2];
         if (diff < 0.0) {
           std::cerr << "[ERROR] lower bound decreased in variational "
-                       "approximation:  \n\tfrom "
-                    << lowerbound[niter - 2] << " to " << lowerbound[niter - 1]
-                    << "!" << std::endl;
+                       "approximation:  \n\tfrom " << lowerbound[niter - 2]
+                    << " to " << lowerbound[niter - 1] << "!" << std::endl;
           status = 1;
           break;
         }
@@ -326,9 +329,8 @@ class PFA_VEM : public PFA {
       }
       if (niter == maxiter) {
         std::cerr << "[WARNIKNG] variational approximation procedure failed to "
-                     "converge at tolerance level "
-                  << tol << ", after " << maxiter
-                  << " iterations: \n\tlog lower bound starts "
+                     "converge at tolerance level " << tol << ", after "
+                  << maxiter << " iterations: \n\tlog lower bound starts "
                   << lowerbound.front() << ", ends " << lowerbound.back() << "!"
                   << std::endl;
         status = 1;

@@ -155,7 +155,7 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, alpha = NULL, fudge =
 #' @description This is a diagnostic function that computes likelihood given simulation parameters
 #' @param D [N, J] matrix of simulated data
 #' @param F [K, J] true factor matrix
-#' @param N [K, K] sample size
+#' @param Q [N, 3] sample positions (columns are K1, K2, relative distance from K1)
 #' @param S [J, 1] vector of simulated standard deviation for features
 #' @return loglik
 #' @details
@@ -164,16 +164,27 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, alpha = NULL, fudge =
 #' @examples
 #' @export
 
-get_model_lik <- function(D, F, N, S) {
-  stopifnot(nrow(N) == ncol(N))
-  stopifnot(nrow(N) == nrow(F))
-  stopifnot(ncol(J) == length(S))
+get_model_lik <- function(D, F, Q, S) {
+  stopifnot(ncol(F) == ncol(D))
+  stopifnot(ncol(D) == length(S))
+  stopifnot(nrow(D) == nrow(Q))
+  stopifnot(ncol(Q) == 3)
+  N <- nrow(D)
+  J <- nrow(D)
+  K <- nrow(F)
+  P <- matrix(0, K, K)
+  for (i in 1:nrow(Q)) P[Q[i, 1], Q[i, 2]] <- P[Q[i, 1], Q[i, 2]] + 1
+  P <- P / sum(P)
   loglik <- 0
   res <- .C("pfa_model_loglik",
             as.double(as.vector(D)),
             as.double(as.vector(F)),
-            as.integer(as.vector(N)),
+            as.double(as.vector(P)),
+            as.double(as.vector(Q)),
             as.double(as.vector(S)),
+            as.integer(N),
+            as.integer(J),
+            as.integer(K),
             loglik = as.double(loglik),
             PACKAGE = "pfar")
   return(res$loglik)

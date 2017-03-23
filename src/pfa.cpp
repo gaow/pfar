@@ -138,6 +138,30 @@ int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
   return 0;
 }
 
+//! Model likelihood for PFA
+// @param D [N, J] matrix of simulated data
+// @param F [K, J] true factor matrix
+// @param P [K, K] true factor frequency matrix
+// @param Q [N, 3] true position of samples
+// @param S [J, 1] vector of simulated standard deviation for features
+// @param N [int_pt] number of rows of matrix X
+// @param J [int_pt] number of columns of matrix X and F
+// @param K [int_pt] number of rows of matrix F and P
+// @param loglik [double_pt] log likelihood (return)
+int pfa_model_loglik(double* D, double* F, double* P, double* Q, double* S,
+                     int* N, int* J, int* K, double* loglik) {
+  // fake data to initialize PFA class that will not get used
+  double* q, *L;
+  q = (double*)malloc(sizeof(double));
+  L = (double*)malloc(sizeof(double) * (*N) * (*K));
+  PFA model = PFA(D, F, P, q, L, *N, *J, *K, 1);
+  arma::vec true_s(S, *J, false, true);
+  arma::mat true_q(Q, *N, 3, false, true);
+  model.update_model_loglik(true_s, true_q);
+  *loglik = model.get_loglik();
+  return 0;
+}
+
 // this computes log delta
 // return: k1k2 by q by N tensor of log delta
 void PFA::update_ldelta(int core) {
@@ -205,9 +229,8 @@ void PFA::update_loglik_and_delta() {
     // FIXME: A hack for k == k single factor case, part 1
     for (size_t k = 0; k < F.n_rows; k++) {
       // reset single factor case: remove zeros
-      delta.slice(n)
-          .row(F_pair_coord[std::make_pair(k, k)])
-          .fill(delta.slice(n).at(F_pair_coord[std::make_pair(k, k)], 0));
+      delta.slice(n).row(F_pair_coord[std::make_pair(k, k)]).fill(
+          delta.slice(n).at(F_pair_coord[std::make_pair(k, k)], 0));
     }
     double delta_n_max = delta.slice(n).max();
     delta.slice(n) = arma::exp(delta.slice(n) - delta_n_max);

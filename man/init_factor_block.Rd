@@ -34,10 +34,9 @@ This is part of a data preprocessing pipeline for Paired Factor Analysis (pfa) w
 \examples{
 ...
 }
-\author{
-Gao Wang and Kushal K. Dey
-}
 \references{
 ...
 }
-
+\author{
+Gao Wang and Kushal K. Dey
+}
