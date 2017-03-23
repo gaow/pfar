@@ -141,19 +141,19 @@ int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
 //! Model likelihood for PFA
 // @param D [N, J] matrix of simulated data
 // @param F [K, J] true factor matrix
-// @param P [K, K] true factor frequency matrix
 // @param Q [N, 3] true position of samples
 // @param S [J, 1] vector of simulated standard deviation for features
 // @param N [int_pt] number of rows of matrix X
 // @param J [int_pt] number of columns of matrix X and F
 // @param K [int_pt] number of rows of matrix F and P
 // @param loglik [double_pt] log likelihood (return)
-int pfa_model_loglik(double* D, double* F, double* P, double* Q, double* S,
-                     int* N, int* J, int* K, double* loglik) {
+int pfa_model_loglik(double* D, double* F, double* Q, double* S, int* N, int* J,
+                     int* K, double* loglik) {
   // fake data to initialize PFA class that will not get used
-  double* q, *L;
+  double* q, *L, *P;
   q = (double*)malloc(sizeof(double));
   L = (double*)malloc(sizeof(double) * (*N) * (*K));
+  P = (double*)malloc(sizeof(double) * (*K) * (*K));
   PFA model = PFA(D, F, P, q, L, *N, *J, *K, 1);
   arma::vec true_s(S, *J, false, true);
   arma::mat true_q(Q, *N, 3, false, true);
@@ -376,4 +376,19 @@ double PFA_VEM::get_variational_lowerbound() {
     }
   }
   return lowerbound;
+}
+
+void PFA::update_model_loglik(arma::vec& true_s, arma::mat& true_q) {
+  loglik = 0;
+  for (size_t n = 0; n < true_q.n_rows; n++) {
+    int k1 = true_q.at(n, 0) - 1;
+    int k2 = true_q.at(n, 1) - 1;
+    for (size_t j = 0; j < D.n_cols; j++) {
+      double m = (k2 < k1)
+                     ? true_q.at(n, 2) * F.at(k2, j) +
+                           (1 - true_q.at(n, 2)) * F.at(k1, j)
+                     : F.at(k1, j);
+      loglik += normal_pdf_log(D.at(n, j), m, true_s.at(j));
+    }
+  }
 }

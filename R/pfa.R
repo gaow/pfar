@@ -172,14 +172,12 @@ get_model_lik <- function(D, F, Q, S) {
   N <- nrow(D)
   J <- nrow(D)
   K <- nrow(F)
-  P <- matrix(0, K, K)
-  for (i in 1:nrow(Q)) P[Q[i, 1], Q[i, 2]] <- P[Q[i, 1], Q[i, 2]] + 1
-  P <- P / sum(P)
   loglik <- 0
+  ## It's very simple to implement but I do it with C++ anyways
+  ## so that all computations are in one place
   res <- .C("pfa_model_loglik",
             as.double(as.vector(D)),
             as.double(as.vector(F)),
-            as.double(as.vector(P)),
             as.double(as.vector(Q)),
             as.double(as.vector(S)),
             as.integer(N),
