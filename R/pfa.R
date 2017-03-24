@@ -174,7 +174,7 @@ get_model_lik <- function(D, F, Q, S) {
   stopifnot(nrow(D) == nrow(Q))
   stopifnot(ncol(Q) == 3)
   N <- nrow(D)
-  J <- nrow(D)
+  J <- ncol(D)
   K <- nrow(F)
   loglik <- 0
   ## It's very simple to implement but I do it with C++ anyways

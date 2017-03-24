@@ -389,9 +389,9 @@ void PFA::update_model_loglik(arma::vec& true_s, arma::mat& true_q) {
     int k1 = true_q.at(n, 0) - 1;
     int k2 = true_q.at(n, 1) - 1;
     for (size_t j = 0; j < D.n_cols; j++) {
-      double m = (k2 < k1)
-                     ? true_q.at(n, 2) * F.at(k2, j) +
-                           (1 - true_q.at(n, 2)) * F.at(k1, j)
+      double m = (k2 != k1)
+                     ? true_q.at(n, 2) * F.at(k1, j) +
+                           (1 - true_q.at(n, 2)) * F.at(k2, j)
                      : F.at(k1, j);
       loglik += normal_pdf_log(D.at(n, j), m, true_s.at(j));
     }
