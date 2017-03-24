@@ -80,7 +80,8 @@ int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
     model = new PFA_VEM(X, F, P, q, L, alpha, *N, *J, *K, *C, *alpha0);
   else
     model = new PFA_EM(X, F, P, q, L, *N, *J, *K, *C);
-  model->set_threads(*n_threads);
+  if (*n_threads > 0)
+    model->set_threads(*n_threads);
   model->write(f1, 0);
   while (*niter <= *maxiter) {
     if (f1.is_open()) {
