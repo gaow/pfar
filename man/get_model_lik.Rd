@@ -21,10 +21,9 @@ loglik
 \description{
 This is a diagnostic function that computes likelihood given simulation parameters
 }
-\author{
-Gao Wang and Kushal K. Dey
-}
 \references{
 ...
 }
-
+\author{
+Gao Wang and Kushal K. Dey
+}
