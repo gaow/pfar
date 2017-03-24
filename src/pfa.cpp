@@ -25,6 +25,7 @@
 // @param maxiter [int_pt] maximum number of iterations
 // @param niter [int_pt] number of iterations
 // @param loglik [maxiter, 1] log likelihood, track of convergence (return)
+// @param BIC [double_pt] Bayesian information criteria (return)
 // @param L [N, K] Loading matrix (return)
 // @param alpha [K, K] Dirichlet posterior parameter matrix for factor pair
 // weights (return)
@@ -40,8 +41,9 @@
 
 int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
            int* C, double* alpha0, int* variational, double* tol, int* maxiter,
-           int* niter, double* loglik, double* L, double* alpha, int* status,
-           int* logfn_1, int* nlf_1, int* logfn_2, int* nlf_2, int* n_threads) {
+           int* niter, double* loglik, double* BIC, double* L, double* alpha,
+           int* status, int* logfn_1, int* nlf_1, int* logfn_2, int* nlf_2,
+           int* n_threads) {
   //
   // Set up logfiles
   //
@@ -133,6 +135,7 @@ int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
   if (*status)
     std::cerr << "[WARNING] PFA failed to converge at tolerance level " << *tol
               << " after " << *niter << " iterations!" << std::endl;
+  *BIC = model->get_bic();
   if (f1.is_open()) f1.close();
   if (f2.is_open()) f2.close();
   return 0;
@@ -150,7 +153,7 @@ int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
 int pfa_model_loglik(double* D, double* F, double* Q, double* S, int* N, int* J,
                      int* K, double* loglik) {
   // fake data to initialize PFA class that will not get used
-  double* q, *L, *P;
+  double *q, *L, *P;
   q = (double*)malloc(sizeof(double));
   L = (double*)malloc(sizeof(double) * (*N) * (*K));
   P = (double*)malloc(sizeof(double) * (*K) * (*K));
@@ -229,8 +232,9 @@ void PFA::update_loglik_and_delta() {
     // FIXME: A hack for k == k single factor case, part 1
     for (size_t k = 0; k < F.n_rows; k++) {
       // reset single factor case: remove zeros
-      delta.slice(n).row(F_pair_coord[std::make_pair(k, k)]).fill(
-          delta.slice(n).at(F_pair_coord[std::make_pair(k, k)], 0));
+      delta.slice(n)
+          .row(F_pair_coord[std::make_pair(k, k)])
+          .fill(delta.slice(n).at(F_pair_coord[std::make_pair(k, k)], 0));
     }
     double delta_n_max = delta.slice(n).max();
     delta.slice(n) = arma::exp(delta.slice(n) - delta_n_max);

@@ -142,8 +142,8 @@ class RuntimeError : public Exception {
 
 extern "C" int pfa_em(double *, double *, double *, double *, int *, int *,
                       int *, int *, double *, int *, double *, int *, int *,
-                      double *, double *, double *, int *, int *, int *, int *,
-                      int *, int *);
+                      double *, double *, double *, double *, int *, int *,
+                      int *, int *, int *, int *);
 extern "C" int pfa_model_loglik(double *, double *, double *, double *, int *,
                                 int *, int *, double *);
 
@@ -198,6 +198,17 @@ class PFA {
   void update_factor_model();
   void update_residual_error();
   double get_loglik() { return loglik; }
+  double get_bic() {
+    // BIC = -2 * loglik + d * log(N)
+    // number of parameters:
+    // P: (K + 1) * K / 2
+    // L: N * K
+    // F: K * J
+    return -2 * loglik +
+           ((P.n_rows + 1) * P.n_rows / 2 + D.n_rows * P.n_rows +
+            P.n_rows * D.n_cols) *
+               std::log(D.n_rows);
+  }
 
  protected:
   // N by J matrix of data
@@ -320,8 +331,9 @@ class PFA_VEM : public PFA {
         double diff = lowerbound[niter - 1] - lowerbound[niter - 2];
         if (diff < 0.0) {
           std::cerr << "[ERROR] lower bound decreased in variational "
-                       "approximation:  \n\tfrom " << lowerbound[niter - 2]
-                    << " to " << lowerbound[niter - 1] << "!" << std::endl;
+                       "approximation:  \n\tfrom "
+                    << lowerbound[niter - 2] << " to " << lowerbound[niter - 1]
+                    << "!" << std::endl;
           status = 1;
           break;
         }
@@ -329,8 +341,9 @@ class PFA_VEM : public PFA {
       }
       if (niter == maxiter) {
         std::cerr << "[WARNIKNG] variational approximation procedure failed to "
-                     "converge at tolerance level " << tol << ", after "
-                  << maxiter << " iterations: \n\tlog lower bound starts "
+                     "converge at tolerance level "
+                  << tol << ", after " << maxiter
+                  << " iterations: \n\tlog lower bound starts "
                   << lowerbound.front() << ", ends " << lowerbound.back() << "!"
                   << std::endl;
         status = 1;

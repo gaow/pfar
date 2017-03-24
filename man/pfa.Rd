@@ -28,10 +28,12 @@ A list with elements below:
 \item{F}{...}
 \item{L}{...}
 \item{P}{...}
+\item{alpha}{...}
 \item{loglik}{...}
-\item{loglik_diff}{...}
+\item{BIC}{...}
 \item{niter}{...}
 \item{status}{...}
+\item{runtime}{...}
 }
 \description{
 ...
@@ -55,9 +57,10 @@ control = list(logfile = 'example_data.pfa', n_cpu = 8)
 res = pfar::pfa(dr_dat, F = init_val$factors, P = init_val$weights, control = control)
 print(res)
 }
-\references{
-...
-}
 \author{
 Gao Wang and Kushal K. Dey
 }
+\references{
+...
+}
+
