@@ -21,6 +21,7 @@
 // @param C [int_pt] number of elements in q
 // @param alpha0 [double_pt] Dirichlet prior for factor weights
 // @param variational [int_pt] 0 or 1, whether or not to use variational method
+// @param fudge [double_pt] fudge factor on single factor weight
 // @param tol [double_pt] tolerance for convergence
 // @param maxiter [int_pt] maximum number of iterations
 // @param niter [int_pt] number of iterations
@@ -40,7 +41,7 @@
 // @param n_threads [int_pt] number of threads for parallel processing
 
 int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
-           int* C, double* alpha0, int* variational, double* tol, int* maxiter,
+           int* C, double* alpha0, int* variational, double* fudge, double* tol, int* maxiter,
            int* niter, double* loglik, double* BIC, double* L, double* alpha,
            int* status, int* logfn_1, int* nlf_1, int* logfn_2, int* nlf_2,
            int* n_threads) {
@@ -82,6 +83,8 @@ int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
     model = new PFA_EM(X, F, P, q, L, *N, *J, *K, *C);
   if (*n_threads > 0)
     model->set_threads(*n_threads);
+  if (*fudge > 0)
+    model->set_node_fudge(*fudge);
   model->write(f1, 0);
   while (*niter <= *maxiter) {
     if (f1.is_open()) {

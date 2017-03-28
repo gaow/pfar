@@ -141,7 +141,7 @@ class RuntimeError : public Exception {
 };
 
 extern "C" int pfa_em(double *, double *, double *, double *, int *, int *,
-                      int *, int *, double *, int *, double *, int *, int *,
+                      int *, int *, double *, int *, double *, double *, int *, int *,
                       double *, double *, double *, double *, int *, int *,
                       int *, int *, int *, int *);
 extern "C" int pfa_model_loglik(double *, double *, double *, double *, int *,
@@ -193,6 +193,7 @@ class PFA {
 
   void update_model_loglik(arma::vec &true_s, arma::mat &true_q);
   void set_threads(int n) { n_threads = n; }
+  void set_node_fudge(double x) { node_fudge = x; }
   void update_ldelta(int core = 0);
   void update_loglik_and_delta();
   void update_factor_model();
