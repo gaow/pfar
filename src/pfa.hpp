@@ -141,7 +141,7 @@ class RuntimeError : public Exception {
 };
 
 extern "C" int pfa_em(double *, double *, double *, double *, int *, int *,
-                      int *, int *, double *, int *, double *, double *, int *, int *,
+                      int *, int *, double *, int *, double *, int *, int *,
                       double *, double *, double *, double *, int *, int *,
                       int *, int *, int *, int *);
 extern "C" int pfa_model_loglik(double *, double *, double *, double *, int *,
@@ -164,7 +164,6 @@ class PFA {
     delta.fill(0);
     n_threads = omp_get_max_threads();
     n_updates = 0;
-    node_fudge = 1.0;
     for (size_t k1 = 0; k1 < F.n_rows; k1++) {
       for (size_t k2 = 0; k2 <= k1; k2++) {
         // set factor pair coordinates to avoid
@@ -193,7 +192,6 @@ class PFA {
 
   void update_model_loglik(arma::vec &true_s, arma::mat &true_q);
   void set_threads(int n) { n_threads = n; }
-  void set_node_fudge(double x) { node_fudge = x; }
   void update_ldelta(int core = 0);
   void update_loglik_and_delta();
   void update_factor_model();
@@ -236,8 +234,6 @@ class PFA {
   int n_threads;
   // updates on the model
   int n_updates;
-  // fudge factor for more weights on the node
-  double node_fudge;
 };
 
 class PFA_EM : public PFA {

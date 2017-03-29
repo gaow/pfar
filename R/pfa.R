@@ -40,7 +40,7 @@
 #' @useDynLib pfar
 #' @export
 
-pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, alpha = NULL, fudge = 1,
+pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, alpha = NULL,
                 control = NULL) {
   ## Initialize data
   if (is.null(F) && is.null(K)) {
@@ -100,10 +100,6 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, alpha = NULL, fudge =
     n_f1 <- length(f1)
     n_f2 <- ifelse(is.null(control$verbose) || control$verbose == FALSE, 0, length(f2))
   }
-  fudge <- as.double(control$node_fudge)
-  if (length(fudge) == 0 || fudge <= 0) {
-    fudge <- 1
-  }
   ## sanity check
   stopifnot(nrow(F) == K)
   stopifnot(ncol(X) == ncol(F))
@@ -129,7 +125,6 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, alpha = NULL, fudge =
             as.integer(length(q)),
             as.double(alpha0),
             as.integer(variational),
-            as.double(fudge),
             as.double(tol),
             as.integer(maxiter),
             niter = as.integer(niter),
