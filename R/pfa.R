@@ -53,12 +53,6 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, alpha = NULL,
   } else {
     K <- nrow(F)
   }
-  if (is.null(P)) {
-    # Initialize P uniformly
-    P <- matrix(0, K, K)
-    P[lower.tri(P)] <- 2 / ((K + 1) * K)
-    diag(P) <- 2 / ((K + 1) * K)
-  }
   if (is.null(q)) {
     # Initialze q to be 0/100, 1/100, 2/100, ..., 1
     q <- seq(0, 100) / 100
@@ -70,6 +64,15 @@ pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, alpha = NULL,
   stopifnot(max(q) <= 1 && min(q) >= 0)
   if (q[1] != 0) {
     q <- c(0, q)
+  }
+  if (is.null(P)) {
+    # Initialize P uniformly
+    P <- matrix(0, K, K)
+    n_edges <- (1 + K) * K / 2 - K
+    n_nodes <- K
+    w_edges <- length(q)
+    P[lower.tri(P)] <- w_edges / (n_edges * w_edges + n_nodes)
+    diag(P) <- 1 / (n_edges * w_edges + n_nodes)
   }
   if (is.null(alpha)) {
     variational <- 0

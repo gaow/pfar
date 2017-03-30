@@ -5,7 +5,7 @@
 \title{Paired factor analysis model}
 \usage{
 pfa(X, K = NULL, F = NULL, P = NULL, q = NULL, alpha = NULL,
-  fudge = 1, control = NULL)
+  control = NULL)
 }
 \arguments{
 \item{X}{[N, J] matrix of observed data.}
