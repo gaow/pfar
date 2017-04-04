@@ -11740,6 +11740,44 @@ div#notebook {
     });
     </script>
     <!-- End of mathjax configuration --></head>
+
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.9.1/jquery-ui.min.js"></script>
+
+<style>  /* defined here in case the main.css below cannot be loaded */
+.lev1 {margin-left: 80px}
+.lev2 {margin-left: 100px}
+.lev3 {margin-left: 120px}
+.lev4 {margin-left: 140px}
+.lev5 {margin-left: 160px}
+.lev6 {margin-left: 180px}
+</style>
+
+<link rel="stylesheet" type="text/css" href="css/jt.css">
+
+<script>
+    MathJax.Hub.Config({
+        extensions: ["tex2jax.js"],
+        jax: ["input/TeX", "output/HTML-CSS"],
+        tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        displayMath: [ ['$$','$$'], ["\\[","\\]"] ],
+        processEscapes: true
+        },
+        "HTML-CSS": {
+            preferredFont: "TeX",
+            availableFonts: ["STIX","TeX"],
+            styles: {
+                scale: 110,
+                ".MathJax_Display": {
+                    "font-size": "110%",
+                }
+            }
+        }
+    });
+</script>
 <body>
   <div tabindex="-1" id="notebook" class="border-box-sizing">
     <div class="container" id="notebook-container">
@@ -11749,7 +11787,7 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="A-quick-start-tutorial-on-pfar">A quick start tutorial on <code>pfar</code><a class="anchor-link" href="#A-quick-start-tutorial-on-pfar">&#182;</a></h1>
+<h1 id="A-quick-start-tutorial">A quick start tutorial<a class="anchor-link" href="#A-quick-start-tutorial">&#182;</a></h1>
 </div>
 </div>
 </div>
@@ -11758,7 +11796,7 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Here we analyze a simulated data-set <code>example_data.rds</code> to show the basic workflow with <code>pfar</code>. Here is a preview on the data-set:</p>
+<h2 id="A-minimal-example">A minimal example<a class="anchor-link" href="#A-minimal-example">&#182;</a></h2><p>We analyze a simulated data-set <code>example_data.rds</code> to show the basic workflow with <code>pfar</code>. Here is a preview on the data-set:</p>
 
 </div>
 </div>
@@ -11768,7 +11806,7 @@ div#notebook {
 <div class="prompt input_prompt">In&nbsp;[1]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-sos"><pre><span></span><span class="n">dat</span> <span class="o">=</span> <span class="n">readRDS</span><span class="p">(</span><span class="s1">&#39;example_data.rds&#39;</span><span class="p">)</span>
+<div class=" highlight hl-sos"><pre><span></span><span class="n">dat</span> <span class="o">=</span> <span class="n">readRDS</span><span class="p">(</span><span class="s1">&#39;../test/example_data.rds&#39;</span><span class="p">)</span>
 <span class="n">names</span><span class="p">(</span><span class="n">dat</span><span class="p">)</span>
 <span class="n">names</span><span class="p">(</span><span class="n">dat</span><span class="err">$</span><span class="n">X</span><span class="p">)</span>
 <span class="n">dim</span><span class="p">(</span><span class="n">dat</span><span class="err">$</span><span class="n">X</span><span class="p">[[</span><span class="mi">1</span><span class="p">]])</span>
