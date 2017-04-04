@@ -127,7 +127,8 @@ int pfa_em(double* X, double* F, double* P, double* q, int* N, int* J, int* K,
     }
     if (*niter == *maxiter) {
       // did not converge
-      *status = 1;
+      if (*tol > 0)
+        *status = 1;
       break;
     }
     // continue with more iterations

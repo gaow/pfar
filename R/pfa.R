@@ -7,7 +7,7 @@
 #' the diagonal is single factor frequencies.
 #' @param q [C, 1] / [int] defines initial vector of possible membership loadings, a discrete set, 0 < q < 1.
 #' @param alpha [double] prior for factor pair weights.
-#' @param control \{tol = 1E-4, maxiter = 10000, logfile = NULL, n_cpu = 4, verbose = FALSE \} list of runtime variables
+#' @param control \{tol = 1E-4, maxiter = 10000, logfile = NULL, n_cpu = 4, init = c(20, 5), verbose = FALSE, init = NULL \} list of runtime variables
 #' @return A list with elements below:
 #' \item{F}{...}
 #' \item{L}{...}
@@ -25,137 +25,148 @@
 #' @author Gao Wang and Kushal K. Dey
 #' @references ...
 #' @examples
-#' ## The example data set can be installed via
-#' ## devtools::install_github("kkdey/singleCellRNASeqMouseDeng2014")
-#' library(singleCellRNASeqMouseDeng2014)
-#' meta_data <- pData(Deng2014MouseESC)
-#' dat = exprs(Deng2014MouseESC)
-#' K = 6
-#' dat = t(limma::voom(dat)$E)
-#' dr_dat = pfar::dr_pca(dat)
-#' init_val = pfar::init_weight_princurve(dr_dat, pfar::init_factor_block(dr_dat, K)$factors)
-#' control = list(logfile = 'example_data.pfa', n_cpu = 8)
-#' res = pfar::pfa(dr_dat, F = init_val$factors, P = init_val$weights, control = control)
-#' print(res)
+#' ## see https://gaow.github.io/pfar
 #' @useDynLib pfar
 #' @export
 
 pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, alpha = NULL,
                 control = NULL) {
-  ## Initialize data
-  if (is.null(F) && is.null(K)) {
-    stop("[ERROR] Please provide either K or F!")
-  }
-  if (is.null(F)) {
-    # Initialize F with random K factors
-    # FIXME: Have to find a smarter initilization of F
-    F <- X[sample(nrow(X), size = K, replace = FALSE),]
-  } else {
-    K <- nrow(F)
-  }
-  if (is.null(q)) {
-    # Initialze q to be 0/100, 1/100, 2/100, ..., 1
-    q <- seq(0, 100) / 100
-  }
-  if (is.integer(q)) {
-    q <- seq(0, 100, by = max(as.integer(100 / q), 1)) / 100
-  }
-  q <- sort(q)
-  stopifnot(max(q) <= 1 && min(q) >= 0)
-  if (q[1] != 0) {
-    q <- c(0, q)
-  }
-  if (is.null(P)) {
-    # Initialize P uniformly
-    P <- matrix(0, K, K)
-    n_edges <- (1 + K) * K / 2 - K
-    n_nodes <- K
-    w_edges <- length(q)
-    P[lower.tri(P)] <- w_edges / (n_edges * w_edges + n_nodes)
-    diag(P) <- 1 / (n_edges * w_edges + n_nodes)
-  }
-  if (is.null(alpha)) {
-    variational <- 0
-  } else {
-    variational <- 1
-    if (alpha == "auto") {
-      alpha <- 2 / ((K + 1) * K)
+  if (is.null(control$init)) {
+    ## Initialize data
+    if (is.null(F) && is.null(K)) {
+      stop("[ERROR] Please provide either K or F!")
     }
-  }
-  tol <- as.double(control$tol)
-  if (length(tol) == 0 || tol <= 0) {
-    tol <- 1E-4
-  }
-  maxiter <- as.integer(control$maxiter)
-  if (length(maxiter) == 0 || maxiter <= 0) {
-    maxiter <- 10000
-  }
-  n_cpu <- as.integer(control$n_cpu)
-  if (length(n_cpu) == 0 || n_cpu <= 0) {
-    n_cpu <- 0
-  }
-  logfile <- control$logfile
-  if (is.null(logfile)) {
-    f1 <- n_f1 <- f2 <- n_f2 <- 0
+    if (is.null(F)) {
+      # Initialize F with random K factors
+      # FIXME: Have to find a smarter initilization of F
+      F <- X[sample(nrow(X), size = K, replace = FALSE),]
+    } else {
+      K <- nrow(F)
+    }
+    if (is.null(q)) {
+      # Initialze q to be 0/100, 1/100, 2/100, ..., 1
+      q <- seq(0, 100) / 100
+    }
+    if (length(q) == 1 && q %% 1 == 0) {
+      q <- seq(0, 100, by = max(as.integer(100 / q), 1)) / 100
+    }
+    q <- sort(q)
+    stopifnot(max(q) <= 1 && min(q) >= 0)
+    if (q[1] != 0) {
+      q <- c(0, q)
+    }
+    if (is.null(P)) {
+      # Initialize P uniformly
+      P <- matrix(0, K, K)
+      n_edges <- (1 + K) * K / 2 - K
+      n_nodes <- K
+      w_edges <- length(q)
+      P[lower.tri(P)] <- w_edges / (n_edges * w_edges + n_nodes)
+      diag(P) <- 1 / (n_edges * w_edges + n_nodes)
+    }
+    if (is.null(alpha)) {
+      variational <- 0
+    } else {
+      variational <- 1
+      if (alpha == "auto") {
+        alpha <- 2 / ((K + 1) * K)
+      }
+    }
+    tol <- as.double(control$tol)
+    if (length(tol) == 0) {
+      tol <- 1E-4
+    }
+    maxiter <- as.integer(control$maxiter)
+    if (length(maxiter) == 0 || maxiter <= 0) {
+      maxiter <- 10000
+    }
+    n_cpu <- as.integer(control$n_cpu)
+    if (length(n_cpu) == 0 || n_cpu <= 0) {
+      n_cpu <- 0
+    }
+    logfile <- control$logfile
+    if (is.null(logfile)) {
+      f1 <- n_f1 <- f2 <- n_f2 <- 0
+    } else {
+      f1 <- charToRaw(paste(logfile, "updates.log", sep = "."))
+      f2 <- charToRaw(paste(logfile, "debug.log", sep = "."))
+      n_f1 <- length(f1)
+      n_f2 <- ifelse(is.null(control$verbose) || control$verbose == FALSE, 0, length(f2))
+    }
+    ## sanity check
+    stopifnot(nrow(F) == K)
+    stopifnot(ncol(X) == ncol(F))
+    stopifnot(nrow(F) == nrow(P))
+    stopifnot(nrow(P) == ncol(P))
+    ## factor analysis
+    loglik <- rep(-999, maxiter)
+    niter <- 0
+    L <- matrix(0, nrow(X), nrow(F))
+    alpha0 <- alpha
+    alpha <- matrix(0, nrow(F), nrow(F))
+    status <- 0
+    start_time <- proc.time()
+    BIC <- 0
+    res <- .C("pfa_em",
+              as.double(as.vector(X)),
+              F = as.double(as.vector(F)),
+              P = as.double(as.vector(P)),
+              as.double(as.vector(q)),
+              as.integer(nrow(X)),
+              as.integer(ncol(X)),
+              as.integer(nrow(F)),
+              as.integer(length(q)),
+              as.double(alpha0),
+              as.integer(variational),
+              as.double(tol),
+              as.integer(maxiter),
+              niter = as.integer(niter),
+              loglik = as.double(as.vector(loglik)),
+              BIC = as.double(BIC),
+              L = as.double(as.vector(L)),
+              alpha = as.double(as.vector(alpha)),
+              status = as.integer(status),
+              as.integer(as.vector(f1)),
+              as.integer(n_f1),
+              as.integer(as.vector(f2)),
+              as.integer(n_f2),
+              as.integer(n_cpu),
+              PACKAGE = "pfar")
+    ## Process output
+    Fout <- matrix(res$F, nrow(F), ncol(F))
+    Lout <- matrix(res$L, nrow(L), ncol(L))
+    if (variational) {
+      alphaout <- matrix(res$alpha, nrow(alpha), ncol(alpha))
+    } else {
+      alphaout <- NULL
+    }
+    Pout <- matrix(res$P, nrow(P), ncol(P))
+    loglik <- res$loglik[1:res$niter]
+    return(list(F_init = F, F = Fout, L = Lout, P = Pout, alpha = alphaout,
+                loglik = loglik, BIC = res$BIC,
+                niter = res$niter, status = res$status,
+                runtime = proc.time() - start_time))
   } else {
-    f1 <- charToRaw(paste(logfile, "updates.log", sep = "."))
-    f2 <- charToRaw(paste(logfile, "debug.log", sep = "."))
-    n_f1 <- length(f1)
-    n_f2 <- ifelse(is.null(control$verbose) || control$verbose == FALSE, 0, length(f2))
+    stopifnot(!is.null(K))
+    stopifnot(control$init[1] %% 1 == 0)
+    stopifnot(control$init[2] %% 1 == 0)
+    ## Search and initialize with the best loglik
+    control_new <- control
+    control_new$init <- NULL
+    control_new$logfile <- NULL
+    control_new$verbose <- F
+    control_new$maxiter <- control$init[2]
+    control_new$tol <- -1
+    mres <- NULL
+    loglik_tmp <- -Inf
+    for (i in 1:control$init[1]) {
+      tmp <- pfa(X, K = K, P = P, q = q, alpha = alpha, control = control_new)
+      if (tmp$loglik[length(tmp$loglik)] > loglik_tmp)
+        mres <- tmp
+    }
+    control$init <- NULL
+    return(pfa(X, F = mres$F, P = mres$P, q = q, alpha = alpha, control = control))
   }
-  ## sanity check
-  stopifnot(nrow(F) == K)
-  stopifnot(ncol(X) == ncol(F))
-  stopifnot(nrow(F) == nrow(P))
-  stopifnot(nrow(P) == ncol(P))
-  ## factor analysis
-  loglik <- rep(-999, maxiter)
-  niter <- 0
-  L <- matrix(0, nrow(X), nrow(F))
-  alpha0 <- alpha
-  alpha <- matrix(0, nrow(F), nrow(F))
-  status <- 0
-  start_time <- proc.time()
-  BIC <- 0
-  res <- .C("pfa_em",
-            as.double(as.vector(X)),
-            F = as.double(as.vector(F)),
-            P = as.double(as.vector(P)),
-            as.double(as.vector(q)),
-            as.integer(nrow(X)),
-            as.integer(ncol(X)),
-            as.integer(nrow(F)),
-            as.integer(length(q)),
-            as.double(alpha0),
-            as.integer(variational),
-            as.double(tol),
-            as.integer(maxiter),
-            niter = as.integer(niter),
-            loglik = as.double(as.vector(loglik)),
-            BIC = as.double(BIC),
-            L = as.double(as.vector(L)),
-            alpha = as.double(as.vector(alpha)),
-            status = as.integer(status),
-            as.integer(as.vector(f1)),
-            as.integer(n_f1),
-            as.integer(as.vector(f2)),
-            as.integer(n_f2),
-            as.integer(n_cpu),
-            PACKAGE = "pfar")
-  ## Process output
-  Fout <- matrix(res$F, nrow(F), ncol(F))
-  Lout <- matrix(res$L, nrow(L), ncol(L))
-  if (variational) {
-    alphaout <- matrix(res$alpha, nrow(alpha), ncol(alpha))
-  } else {
-    alphaout <- NULL
-  }
-  Pout <- matrix(res$P, nrow(P), ncol(P))
-  loglik <- res$loglik[1:res$niter]
-  return(list(F_init = F, F = Fout, L = Lout, P = Pout, alpha = alphaout,
-              loglik = loglik, BIC = res$BIC,
-              niter = res$niter, status = res$status,
-              runtime = proc.time() - start_time))
 }
 
 #' @title Get model likelihood for PFA 

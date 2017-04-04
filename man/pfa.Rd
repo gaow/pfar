@@ -21,7 +21,7 @@ the diagonal is single factor frequencies.}
 
 \item{alpha}{[double] prior for factor pair weights.}
 
-\item{control}{\{tol = 1E-4, maxiter = 10000, logfile = NULL, n_cpu = 4, verbose = FALSE \} list of runtime variables}
+\item{control}{\{tol = 1E-4, maxiter = 10000, logfile = NULL, n_cpu = 4, init = c(20, 5), verbose = FALSE, init = NULL \} list of runtime variables}
 }
 \value{
 A list with elements below:
@@ -44,18 +44,7 @@ A list with elements below:
 }
 }
 \examples{
-## The example data set can be installed via
-## devtools::install_github("kkdey/singleCellRNASeqMouseDeng2014")
-library(singleCellRNASeqMouseDeng2014)
-meta_data <- pData(Deng2014MouseESC)
-dat = exprs(Deng2014MouseESC)
-K = 6
-dat = t(limma::voom(dat)$E)
-dr_dat = pfar::dr_pca(dat)
-init_val = pfar::init_weight_princurve(dr_dat, pfar::init_factor_block(dr_dat, K)$factors)
-control = list(logfile = 'example_data.pfa', n_cpu = 8)
-res = pfar::pfa(dr_dat, F = init_val$factors, P = init_val$weights, control = control)
-print(res)
+## see https://gaow.github.io/pfar
 }
 \references{
 ...

@@ -7,7 +7,7 @@ install:
 
 docs:
 	@echo 'roxygen2::roxygenise()' | R --vanilla --silent
-	@cd vignettes; sos convert quick_start.ipynb quick_start.html; cd -
+	@cd docs; make; cd -
 
 clean:
 	rm -f src/pfa.o src/pfar.so src/symbols.rds pfar_*.tar.gz
