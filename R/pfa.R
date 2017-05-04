@@ -31,6 +31,7 @@
 
 pfa <- function(X, K = NULL, F = NULL, P = NULL, q = NULL, alpha = NULL,
                 control = NULL) {
+  if (!is.null(F)) control$init <- NULL
   if (is.null(control$init)) {
     ## Initialize data
     if (is.null(F) && is.null(K)) {
